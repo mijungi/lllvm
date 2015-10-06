@@ -182,6 +182,62 @@ cov_x = 1e-6*eye(n*dx);
 trCVinvH = trace(v'*invV*H); 
 display(sprintf('tra(CtrpinvVH): %.3f', trCVinvH ));
 
+%% so far so good! 
+% now, check if eq (31) and eq (32) are the same.
+
+C = reshape(C, dy, dx, n);
+A_E = zeros(n*dy, n*dx);
+for i=1:n
+    Ci = C(:,:,i);
+    non0_idx = find(G(i,:));
+    sum_k_trm = gamma*(sum(C(:,:,non0_idx),3) + length(non0_idx)*Ci);
+    
+    for j=1:n
+        eta_ij = G(i,j);
+        Cj = C(:,:,j);
+        if i==j
+            del_ij = 1;
+        else
+            del_ij = 0;
+        end
+        
+        A_E(1+(i-1)*dy: i*dy, 1+(j-1)*dx:j*dx) = -eta_ij*gamma*(Cj+Ci) + del_ij*sum_k_trm;
+    end
+end
+
+etrpSig_ye = E(:)'*sig_y*E(:);
+xtrpA_EtrpSig_yA_Ex = x(:)'*A_E'*sig_y*A_E*x(:);
+display(sprintf('e trp Sig_y e : %.3f', etrpSig_ye ));
+display(sprintf('xtrp A_Etrp Sig_y A_E x  : %.3f', xtrpA_EtrpSig_yA_Ex ));
+
+Q = zeros(n*dx, n);
+for i=1:n
+    x_i = x(:,i);
+    
+    non0_idx = find(G(i,:));
+    sum_k_trm = length(non0_idx)*x_i - sum(x(:,non0_idx),2);
+
+    for j=1:n
+        eta_ij = G(i,j);
+        x_j = x(:,j);
+        if i==j
+            del_ij = 1;
+        else
+            del_ij = 0;
+        end
+        
+        Q(1+(j-1)*dx:j*dx, i) = eta_ij*gamma*(x_i-x_j) + del_ij*gamma*sum_k_trm;
+        
+    end
+end
+
+Ltilde = inv(epsilon*ones_n*ones_n' + 2*gamma*L); 
+trQLtildeQtrpCtrpC = trace(Q*Ltilde*Q'*v'*v);
+display(sprintf('trace(Q Ltilde Qtrp Ctrp C)  : %.3f', trQLtildeQtrpCtrpC ));
+
+
+%% Then, see how to simplify A_E'*Sig_y*A_E , this will be beneficial in computing sufficient statistics later
+
 
 
 
