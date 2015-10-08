@@ -57,8 +57,6 @@ y = Y(:);
 
 %% check prior on x
 
-% x = randn(dx, n);
-
 One_vec_n = ones(n,1);
 invOmega = kron(2*L,speye(dx));
 
@@ -85,10 +83,6 @@ log_prob_x_eq = exponent_eq -0.5*n*dx*log(2*pi) + 0.5*logdetns(invPi);
 
 %% check prior on C (we don't need beta, so remove it from the model)
 
-% v = randn(dy, dx*n);
-
-% J = kron(ones(n,1), eye(dx));
-
 before_log = mvnpdf(v(:)', zeros(1, n*dx*dy), kron(inv(epsilon*J*J' + invOmega), eye(dy))); 
 log_prob_c = log(before_log);
 exponent = -epsilon*0.5*trace(v*J*J'*v') - 0.5*trace(invOmega*v'*v);
@@ -111,12 +105,6 @@ log_prob_c_eq = exponent  - 0.5*n*dx*dy*log(2*pi) + 0.5*dy*logdetns(epsilon*J*J'
 [log_prob_c log_prob_c_eq]
 
 %% check likelihood
-
-% Y = randn(dy, n);
-
-% ones_n = ones(n,1);
-
-% [-0.5*epsilon*sum(sum(Y,2).^2)  -0.5*Y(:)'*kron(epsilon*ones_n*ones_n', eye(dy))*Y(:)]
 
 invV = gamma*eye(dy);
 Cmat = reshape(v, dy, dx, n);
@@ -173,7 +161,7 @@ display(sprintf('y trp e: %.3f',ye ));
 
 diagU = 1; 
 cov_c = 1e-6*eye(n*dx);
- [~, b] = compute_invA_qC_and_B_qC(G, v, cov_c, invV, y, n, dy, dx, diagU); 
+ [Ainv, b] = compute_invA_qC_and_B_qC(G, v, cov_c, invV, y, n, dy, dx, diagU); 
 xb = x(:)'*b; 
 display(sprintf('x trp b: %.3f',xb ));
 
@@ -238,7 +226,79 @@ display(sprintf('trace(Q Ltilde Qtrp Ctrp C)  : %.3f', trQLtildeQtrpCtrpC ));
 
 %% Then, see how to simplify A_E'*Sig_y*A_E , this will be beneficial in computing sufficient statistics later
 
+% first see if eq 43 is correct: 
 
+% define A : =  A_E'*sig_y*A_E
+A = zeros(n*dx, n*dx);
+% size(Ainv)
+
+for i=1:n
+    
+    for j=1:n
+        
+        Aij = zeros(dx, dx);
+        for p=1:n
+            for q=1:n
+                Ltilde_p_q = Ltilde(p, q); 
+                A_E_p_i = A_E(1+(p-1)*dy:p*dy, 1+(i-1)*dx:i*dx);
+                A_E_q_j = A_E(1+(q-1)*dy:q*dy, 1+(j-1)*dx:j*dx);
+                Aij_tmp =  Ltilde_p_q*A_E_p_i'*A_E_q_j; 
+                Aij = Aij  + Aij_tmp; 
+            end
+        end
+        
+        A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
+        
+        
+    end
+    
+end
+
+
+AEsigyAE = A_E'*sig_y*A_E;
+xtrpAEsigyAEx = x(:)'*AEsigyAE*x(:); 
+
+display(sprintf('x trp A_E trp sig_y A_E x  : %.3f', xtrpAEsigyAEx  ));
+
+xtrpAx = x(:)'*A*x(:);
+display(sprintf('x trp A x  : %.3f', xtrpAx  ));
+
+% hence eq(43) is correct. 
+
+%% check if eq(52) is correct
+
+Gamma = zeros(n*dx, n*dx);
+% size(Ainv)
+
+for i=1:n
+    
+    for j=1:n
+        
+        Gammaij = zeros(dx, dx);
+        
+        for k=1:n
+            for kprim=1:n
+                Ltilde_p_q = Ltilde(k, kprim); 
+                Gamma_k_i= Q(1+(i-1)*dx:i*dx, k);
+                Gamma_kprim_j = Q(1+(j-1)*dx:j*dx, kprim);
+                Gammaij_tmp =  Ltilde_p_q*Gamma_k_i*Gamma_kprim_j'; 
+                Gammaij = Gammaij  + Gammaij_tmp; 
+            end
+        end
+        
+        Gamma(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gammaij;
+        
+        
+    end
+    
+end
+
+
+
+display(sprintf('trace(Q Ltilde Qtrp Ctrp C)  : %.3f', trQLtildeQtrpCtrpC ));
+
+trGammaCtrpC = trace(Gamma*v'*v);
+display(sprintf('trace(Gamma Ctrp C)  : %.3f', trGammaCtrpC ));
 
 
 
