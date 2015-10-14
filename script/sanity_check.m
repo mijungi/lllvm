@@ -10,7 +10,7 @@ dy = 3; % dim(y)
 n = 20;  % number of datapoints
 
 alpha = 1; % precision of X (zero-centering)
-gamma = .2; % noise precision in likelihood
+gamma = 2; % noise precision in likelihood
 epsilon = 0.001;
 
 %% (1) define a graph
@@ -174,12 +174,14 @@ display(sprintf('y trp e: %.3f',ye ));
 
 diagU = 1;
 cov_c = 1e-6*eye(n*dx);
-[Ainv, b] = compute_invA_qC_and_B_qC(G, v, cov_c, invV, y, n, dy, dx, diagU);
+% [Ainv, b] = compute_invA_qC_and_B_qC(G, v, cov_c, invV, y, n, dy, dx, diagU);
+[~, b] = compute_suffstat_A_b(G, v, cov_c, Y, gamma, epsilon);
 xb = x(:)'*b;
 display(sprintf('x trp b: %.3f',xb ));
 
 cov_x = 1e-6*eye(n*dx);
-[~, H] = compute_invGamma_qX_and_H_qX(G, x(:), cov_x, y, n, dy, dx);
+% [~, H] = compute_invGamma_qX_and_H_qX(G, x(:), cov_x, y, n, dy, dx);
+[~, H] = compute_suffstat_Gamma_h(G, x(:), cov_x, Y, gamma, epsilon); 
 trCVinvH = trace(v'*invV*H);
 display(sprintf('tra(CtrpinvVH): %.3f', trCVinvH ));
 
@@ -306,8 +308,6 @@ for i=1:n
     end
     
 end
-
-
 
 display(sprintf('trace(Q Ltilde Qtrp Ctrp C)  : %.3f', trQLtildeQtrpCtrpC ));
 
@@ -633,9 +633,89 @@ display(sprintf('x trp Aij without pq x  : %.3f', xtrpAijwithoutpqx  ));
 % norm(Ltilde_ECC-Aij)
 
 
+%% check if eq 64 is correct
+
+% mean_x : size of (dx*n, 1)
+% cov_x : size of (dx*n, dx*n)
+
+mean_x = x(:);
+cov_x = 1e-6*eye(dx*n);
+
+EXX = cov_x + mean_x * mean_x';
+
+Gamma_without_pq = zeros(n*dx, n*dx); 
+tic;
+
+for i=1:n
+    for j=i+1:n
+        nonzero_p = find(G(i,:));
+        nonzero_q = find(G(j,:));
+        
+        sum_EXX = compute_sum_EXX(nonzero_p, nonzero_q, i, j, Ltilde, EXX); 
+
+        Ltilde_pq = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, EXX, 'pq');
+        Ltilde_pj = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, EXX, 'pj');
+        Ltilde_iq = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, EXX, 'iq');
+        Ltilde_ij = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, EXX, 'ij');
+        
+        EXX_cell_for_sum = mat2cell(Ltilde_pq.*sum_EXX, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+        EXX_mat_for_sum = reshape([EXX_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+        Ltilde_EXX_pq = sum(EXX_mat_for_sum, 3);
+        
+        EXX_cell_for_sum = mat2cell(Ltilde_pj.*sum_EXX, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+        EXX_mat_for_sum = reshape([EXX_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+        Ltilde_EXX_pj = sum(EXX_mat_for_sum, 3);
+        
+        EXX_cell_for_sum = mat2cell(Ltilde_iq.*sum_EXX, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+        EXX_mat_for_sum = reshape([EXX_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+        Ltilde_EXX_iq = sum(EXX_mat_for_sum, 3);
+        
+        EXX_cell_for_sum = mat2cell(Ltilde_ij.*sum_EXX, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+        EXX_mat_for_sum = reshape([EXX_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+        Ltilde_EXX_ij = sum(EXX_mat_for_sum, 3);
+
+        Gamma_without_pq(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = gamma^2*(Ltilde_EXX_pq - Ltilde_EXX_pj - Ltilde_EXX_iq + Ltilde_EXX_ij);
+    end
+end
+
+Gamma_without_pq = Gamma_without_pq + Gamma_without_pq'; 
+
+for i=1:n
+    j=i;
+    nonzero_p = find(G(i,:));
+    nonzero_q = find(G(j,:));
+    
+    sum_EXX = compute_sum_EXX(nonzero_p, nonzero_q, i, j, Ltilde, EXX);
+    
+    Ltilde_pq = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, EXX, 'pq');
+    Ltilde_pj = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, EXX, 'pj');
+    Ltilde_iq = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, EXX, 'iq');
+    Ltilde_ij = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, EXX, 'ij');
+    
+    EXX_cell_for_sum = mat2cell(Ltilde_pq.*sum_EXX, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+    EXX_mat_for_sum = reshape([EXX_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+    Ltilde_EXX_pq = sum(EXX_mat_for_sum, 3);
+    
+    EXX_cell_for_sum = mat2cell(Ltilde_pj.*sum_EXX, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+    EXX_mat_for_sum = reshape([EXX_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+    Ltilde_EXX_pj = sum(EXX_mat_for_sum, 3);
+    
+    EXX_cell_for_sum = mat2cell(Ltilde_iq.*sum_EXX, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+    EXX_mat_for_sum = reshape([EXX_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+    Ltilde_EXX_iq = sum(EXX_mat_for_sum, 3);
+    
+    EXX_cell_for_sum = mat2cell(Ltilde_ij.*sum_EXX, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+    EXX_mat_for_sum = reshape([EXX_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+    Ltilde_EXX_ij = sum(EXX_mat_for_sum, 3);
+    
+    Gamma_without_pq(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = gamma^2*(Ltilde_EXX_pq - Ltilde_EXX_pj - Ltilde_EXX_iq + Ltilde_EXX_ij);
+    
+end
+
+toc;
 
 
-
-
+trGamma_without_pqCtrpC = trace(Gamma_without_pq*v'*v);
+display(sprintf('trace(Gamma without pq Ctrp C)  : %.3f', trGamma_without_pqCtrpC ));
 
 
