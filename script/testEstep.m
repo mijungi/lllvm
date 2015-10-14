@@ -75,6 +75,8 @@ end
 new_gamma = gamma;
 new_alpha = alpha; 
 
+J = kron(ones(n,1), eye(dx));
+
 %% EM starts
 while (i_em<=max_em_iter)
     
@@ -83,18 +85,14 @@ while (i_em<=max_em_iter)
     %% (1) E step
     
     % compute mean and cov of x given c (eq.47 and 48)
-    tic; 
     [A, b] = compute_suffstat_A_b(G, mean_c, cov_c, Y, new_gamma, epsilon);
     cov_x = inv(A+ invPi);
     mean_x = cov_x*b;
-    toc; 
 
-    %%
-    
-    % compute mean and cov of c given x (eq.19)
-%     [invGamma_qX, H_qX] = compute_invGamma_qX_and_H_qX(G, mean_x_qC, cov_x_qC, Y, n, dy, dx);
-%     cov_c_qX = inv(gamma*invGamma_qX + epsilon*eye(size(invOmega)) + invOmega);
-%     mean_c_qX = invV*H_qX*cov_c_qX';
+    % compute mean and cov of c given x (eq.56)
+    [Gamma, H] = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma, epsilon); 
+    cov_c = inv(Gamma + epsilon*J*J' + invOmega); 
+    mean_c = gamma*H*cov_c';
    
     %% (2) M step: we don't update hyperparameters. Just compute lower bound with new mean/cov of x and C
     
@@ -103,7 +101,6 @@ while (i_em<=max_em_iter)
     [newAlpha, lwb_x] = Mstep_updateAlpha(const, invOmega, mean_x_qC, cov_x_qC);
     [newGamma, lwb_likelihood] = Mstep_updateGamma(const, mean_c_qX, cov_c_qX, invGamma_qX, H_qX, n, dy, L, invV, diagU, epsilon, Y);
 
-    
     %% (3) compute the lower bound
     
     variational_lwb(i_em) = lwb_likelihood + lwb_C + lwb_x; % eq.(21)+(22)+(23)
