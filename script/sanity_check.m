@@ -437,7 +437,7 @@ xtrpAijfullx = x(:)'*Aij_full*x(:);
 display(sprintf('x trp Aij full x  : %.3f', xtrpAijfullx  ));
 
 
-%% eq (58) 
+%% eq (58)
 
 % to remove the two for-loops for k and k'
 
@@ -448,6 +448,7 @@ ECC = cov_c + mean_c' * mean_c;
 
 Aij_pq_only = zeros(n*dx, n*dx);
 
+tic; 
 for i=1:n
     
     for j=1:n
@@ -485,77 +486,151 @@ for i=1:n
     end
     
 end
-
+toc;
 
 xtrpAijpqonlyx = x(:)'*Aij_pq_only*x(:);
 display(sprintf('x trp Aij pq only x  : %.3f', xtrpAijpqonlyx  ));
 
-%% now I want to further remove the for-loops for p and q
+%% eq (58) without the for-loops for p and q 
 
-% Aij_no_pq = zeros(n*dx, n*dx);
-%
-% for i=1:n
-%
-%     for j=1:n
-%
-%         % for a given (i, j), extract indices for non-zero p's and q's
-%
-%         nonzero_p = find(G(i,:));
-%         nonzero_q = find(G(j,:));
-%
-%         % (1) compute gamma^2 sum_p sum_q Ltilde(p,q) eta_pi eta_qj <CpCq
-%
-%         Ltilde_pq = Ltilde(nonzero_p, nonzero_q);
-%         Ltilde_pq_tiled = kron(Ltilde_pq, ones(dx, dx));
-%
-%         idx_mat = zeros(n, n);
-%         idx_mat(nonzero_p, nonzero_q) = 1;
-%         idx_mat_pq = kron(idx_mat, ones(dx, dx));
-%         ECC_pq = ECC.*idx_mat_pq;
-%         ECC_pq = reshape(ECC_pq(ECC_pq~=0), length(nonzero_p)*dx, []);
-%
-%         % Ltilde(p,q) <Cp\trp Cq>, but before summation over p and q
-%         ECC_pq_cell_for_sum = mat2cell(ECC_pq.*Ltilde_pq_tiled, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
-%         ECC_pq_mat_for_sum = reshape([ECC_pq_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
-%         ECC_pq = sum(ECC_pq_mat_for_sum, 3); % this is : sum_p sum_q Ltilde(p,q) <Cp\trp Cq>
-%
-%
-%         Aij_no_pq(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = gamma^2.*(result_sum);
-%
-%
+tic; 
+
+mean_c = v;
+cov_c = 1e-6*eye(dx*n);
+
+ECC = cov_c + mean_c' * mean_c;
+
+Aij_without_pq = zeros(n*dx, n*dx); 
+
+for i=1:n
+    for j=i+1:n
+        nonzero_p = find(G(i,:));
+        nonzero_q = find(G(j,:));
+        
+        sum_ECC = compute_sum_ECC(nonzero_p, nonzero_q, i, j, Ltilde, ECC); 
+
+        Ltilde_pq = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, ECC, 'pq');
+        Ltilde_pj = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, ECC, 'pj');
+        Ltilde_iq = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, ECC, 'iq');
+        Ltilde_ij = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, ECC, 'ij');
+        
+        ECC_cell_for_sum = mat2cell(Ltilde_pq.*sum_ECC, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+        ECC_mat_for_sum = reshape([ECC_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+        Ltilde_ECC_pq = sum(ECC_mat_for_sum, 3);
+        
+        ECC_cell_for_sum = mat2cell(Ltilde_pj.*sum_ECC, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+        ECC_mat_for_sum = reshape([ECC_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+        Ltilde_ECC_pj = sum(ECC_mat_for_sum, 3);
+        
+        ECC_cell_for_sum = mat2cell(Ltilde_iq.*sum_ECC, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+        ECC_mat_for_sum = reshape([ECC_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+        Ltilde_ECC_iq = sum(ECC_mat_for_sum, 3);
+        
+        ECC_cell_for_sum = mat2cell(Ltilde_ij.*sum_ECC, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+        ECC_mat_for_sum = reshape([ECC_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+        Ltilde_ECC_ij = sum(ECC_mat_for_sum, 3);
+
+        Aij_without_pq(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = gamma^2*(Ltilde_ECC_pq - Ltilde_ECC_pj - Ltilde_ECC_iq + Ltilde_ECC_ij);
+    end
+end
+
+Aij_without_pq = Aij_without_pq + Aij_without_pq'; 
+
+for i=1:n
+    j =i;
+    nonzero_p = find(G(i,:));
+    nonzero_q = find(G(j,:));
+    
+    sum_ECC = compute_sum_ECC(nonzero_p, nonzero_q, i, j, Ltilde, ECC);
+    
+    Ltilde_pq = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, ECC, 'pq');
+    Ltilde_pj = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, ECC, 'pj');
+    Ltilde_iq = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, ECC, 'iq');
+    Ltilde_ij = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, ECC, 'ij');
+    
+    ECC_cell_for_sum = mat2cell(Ltilde_pq.*sum_ECC, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+    ECC_mat_for_sum = reshape([ECC_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+    Ltilde_ECC_pq = sum(ECC_mat_for_sum, 3);
+    
+    ECC_cell_for_sum = mat2cell(Ltilde_pj.*sum_ECC, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+    ECC_mat_for_sum = reshape([ECC_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+    Ltilde_ECC_pj = sum(ECC_mat_for_sum, 3);
+    
+    ECC_cell_for_sum = mat2cell(Ltilde_iq.*sum_ECC, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+    ECC_mat_for_sum = reshape([ECC_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+    Ltilde_ECC_iq = sum(ECC_mat_for_sum, 3);
+    
+    ECC_cell_for_sum = mat2cell(Ltilde_ij.*sum_ECC, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
+    ECC_mat_for_sum = reshape([ECC_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
+    Ltilde_ECC_ij = sum(ECC_mat_for_sum, 3);
+    
+    Aij_without_pq(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = gamma^2*(Ltilde_ECC_pq - Ltilde_ECC_pj - Ltilde_ECC_iq + Ltilde_ECC_ij);
+end
+
+toc;
+
+xtrpAijwithoutpqx = x(:)'*Aij_without_pq*x(:);
+display(sprintf('x trp Aij without pq x  : %.3f', xtrpAijwithoutpqx  ));
+
+%% this was for checking each term in Aij_without_pq
+
+% 
+% i = 18;
+% j = 1;
+% 
+% nonzero_p = find(G(i,:));
+% nonzero_q = find(G(j,:));
+% whichterm = 'ij';
+% 
+% %  'pq' computes : sum_p sum_q Ltilde(p,q) eta_pi eta_qj <CpCq + CpCj + CiCq + CiCj>
+% Ltilde_ECC = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, ECC, whichterm);
+
+
+% mean_c = v;
+% cov_c = 1e-6*eye(dx*n);
+% 
+% ECC = cov_c + mean_c' * mean_c;
+% 
+% Ltilde_i_j = Ltilde(i,j);
+% Aij = zeros(dx, dx);
+% 
+% for p=1:n
+%     
+%     eta_pi = G(p,i);
+%     Ltilde_p_j = Ltilde(p, j);
+%     
+%     for q=1:n
+%         
+%         eta_qj = G(q,j);
+%         
+%         Ltilde_p_q = Ltilde(p, q);
+%         Ltilde_q_i = Ltilde(q, i);
+%         
+%         CpCq = ECC(1+(p-1)*dx:p*dx, 1+(q-1)*dx:q*dx);
+%         CpCj = ECC(1+(p-1)*dx:p*dx, 1+(j-1)*dx:j*dx);
+%         CiCq = ECC(1+(i-1)*dx:i*dx, 1+(q-1)*dx:q*dx);
+%         CiCj = ECC(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx);
+%         
+%         if strcmp(whichterm, 'pq')
+%             Aij_tmp =  eta_pi*eta_qj*(Ltilde_p_q )*(CpCq + CpCj + CiCq + CiCj);
+%         elseif strcmp(whichterm, 'pj')
+%             Aij_tmp =  eta_pi*eta_qj*(Ltilde_p_j)*(CpCq + CpCj + CiCq + CiCj);
+%         elseif strcmp(whichterm, 'iq')
+%             Aij_tmp =  eta_pi*eta_qj*(Ltilde_q_i)*(CpCq + CpCj + CiCq + CiCj);
+%         elseif strcmp(whichterm, 'ij')
+%             Aij_tmp =  eta_pi*eta_qj*(Ltilde_i_j)*(CpCq + CpCj + CiCq + CiCj);
+%         else
+%             display('oopsy, what are you doing?');
+%         end
+%         %         Aij_tmp =  gamma^2*eta_pi*eta_qj*(Ltilde_p_q - Ltilde_p_j - Ltilde_q_i + Ltilde_i_j )*(CpCq + CpCj + CiCq + CiCj);
+%         Aij = Aij  + Aij_tmp;
+%         
 %     end
-%
+%     
 % end
-%
-%
-% xtrpAijnopqx = x(:)'*Aij_no_pq*x(:);
-% display(sprintf('x trp Aij no pq x  : %.3f', xtrpAijnopqx  ));
-
-nonzero_p = find(G(i,:));
-nonzero_q = find(G(j,:));
-
-% (1) compute gamma^2 
-
-Ltilde_pq_ECC_qp = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, ECC, 'pq');
-
-
-% don't forget to mul
-
-% Ltilde_pq = Ltilde(nonzero_p, nonzero_q);
-% Ltilde_pq_tiled = kron(Ltilde_pq, ones(dx, dx));
 % 
-% idx_mat = zeros(n, n);
-% idx_mat(nonzero_p, nonzero_q) = 1;
-% idx_mat_pq = kron(idx_mat, ones(dx, dx));
-% ECC_pq = ECC.*idx_mat_pq;
-% ECC_pq = reshape(ECC_pq(ECC_pq~=0), length(nonzero_p)*dx, []);
 % 
-% % Ltilde(p,q) <Cp\trp Cq>, but before summation over p and q
-% ECC_pq_cell_for_sum = mat2cell(ECC_pq.*Ltilde_pq_tiled, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
-% ECC_pq_mat_for_sum = reshape([ECC_pq_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
-% ECC_pq = sum(ECC_pq_mat_for_sum, 3); % this is : sum_p sum_q Ltilde(p,q) <Cp\trp Cq>
-% 
-
+% norm(Ltilde_ECC-Aij)
 
 
 
