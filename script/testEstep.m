@@ -23,7 +23,7 @@ for seednum = 1:maxseed
     n = 20;  % number of datapoints
     
     % maximum number of EM iterations to perform
-    max_em_iter = 30;
+    max_em_iter = 20;
     
     % true/false to store result. If true, record all variables updated in every
     % EM iteration.
@@ -33,8 +33,10 @@ for seednum = 1:maxseed
     alpha = 10*rand; % precision of X (zero-centering)
     gamma = 10*rand; % noise precision in likelihood
     
-    epsilon = 1e-2;
+    epsilon = 1e-4;
     howmanyneighbors = (ceil(n/2*rand))+1; 
+    
+%     [alpha gamma howmanyneighbors]
     
     %% (1) generate data
     
@@ -49,9 +51,7 @@ for seednum = 1:maxseed
     mean_c = randn(dy, dx*n);
     
     i_em = 1; % first EM iteration number
-    
     variational_lwb = zeros(max_em_iter, 1); % storing lowerbound in each EM iteration.
-    thresh_lwb = 0.01; % we stop EM when change in lwb gets below this threshold.
     
     % to store results
     if is_results_stored
@@ -60,10 +60,7 @@ for seednum = 1:maxseed
         meanXmat = zeros(n*dx, max_em_iter);
         covCmat = zeros(n*dx, max_em_iter);
         covXmat = zeros(n*dx, max_em_iter);
-        
-        %     alphamat = zeros(max_em_iter,1);
-        %     gammamat  = zeros(max_em_iter,1);
-        
+
         % partial lower bound from the likelihood term
         LB_like = zeros(max_em_iter, 1);
         
@@ -73,10 +70,6 @@ for seednum = 1:maxseed
         % partial lower bound from -KL(q(x)||p(x))
         LB_x = zeros(max_em_iter, 1);
     end
-    
-    % since now we're only updating mean_c, mean_x, and cov_c, cov_x
-    % we initialise gamma and alpha with their true values.
-    % when we do Mstep as well, randomly initialise these.
     
     J = kron(ones(n,1), eye(dx));
     
@@ -131,11 +124,11 @@ for seednum = 1:maxseed
     end
     
     % this should be always 0, if lower bound doens't decrease
+%     display(sprintf('# decreasing lwb pts: %.3f', sum((diff(variational_lwb)<0)&(abs(diff(variational_lwb))>1e-3))))
     lwb_detector(seednum) = sum((diff(variational_lwb)<0)&(abs(diff(variational_lwb))>1e-3));
-    
     display(sprintf('# decreasing lwb pts  : %.3f', lwb_detector(seednum)));
 
-    % change seed back
+%     change seed back
     rng(oldRng);
     
 end
