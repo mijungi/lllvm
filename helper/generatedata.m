@@ -3,7 +3,7 @@
 % Mijung wrote
 % Oct 13, 2015
 
-function [vy, Y, vc, C, vx, X, G,  L, invOmega] = generatedata(dy, dx, n, alpha, gamma, epsilon)
+function [vy, Y, vc, C, vx, X, G,  L, invOmega] = generatedata(dy, dx, n, alpha, gamma, epsilon, howmanyneighbors)
 
 % inputs
 % (1) dy: dimension of y
@@ -12,6 +12,7 @@ function [vy, Y, vc, C, vx, X, G,  L, invOmega] = generatedata(dy, dx, n, alpha,
 % (4) alpha: prior precision for x
 % (5) gamma: noise precision in likelihood 
 % (6) epsilon: a constant term added to prior precision for C
+% (7) howmanyneighbors : for G
 
 % outputs
 % (1) vy: vectorized y (length of dy*n)
@@ -26,7 +27,7 @@ function [vy, Y, vc, C, vx, X, G,  L, invOmega] = generatedata(dy, dx, n, alpha,
 
 %% (1) define a graph
 
-howmanyneighbors = 5;
+% howmanyneighbors = 5;
 
 % adjacency matrix
 G = zeros(n,n,howmanyneighbors-1);
