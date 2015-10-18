@@ -18,7 +18,7 @@ function [A, b] = compute_suffstat_A_b(G, mean_c, cov_c,  Y, gamma, epsilon)
 % (2) b: eq(59)
 
 % unpack essential quantities
-n = size(Y, 2);
+[dy, n] = size(Y);
 dx = size(mean_c,2)/n;
 
 % compute Ltilde : inv(epsilon*ones_n*ones_n' + 2*gamma*L)
@@ -39,7 +39,7 @@ b = gamma*b_without_gamma;
 
 %(2) computing A
 
-ECC = cov_c + mean_c' * mean_c;
+ECC = dy*cov_c + mean_c' * mean_c;
 
 A = zeros(n*dx, n*dx); 
 % compute the upper part first
