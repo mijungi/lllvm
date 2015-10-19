@@ -69,15 +69,34 @@ ECTC = dy*cov_c + mean_c' * mean_c;
 % an nxn cell array. Each element is a dx x dx matrix.
 ECTC_cell = mat2cell(ECTC, dx*ones(1, n), dx*ones(1, n));
 
-A = zeros(n*dx, n*dx);
 % compute the upper part. 
+%%
+% A = zeros(n*dx, n*dx);
+% tic; 
+% for i=1:n
+%     for j=i+1:n
+%         Aij = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, j);
+%         A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
+%     end
+% end
+% toc;
+% 
+% A = A + A';
+
+A = zeros(n*dx, n*dx);
+% tic;
 for i=1:n
-    for j=i+1:n
+%     compute this only for neighbouring j's of i
+    j_nonzero_idx = find(G(i,:));
+    for jj=1:length(j_nonzero_idx)
+        j = j_nonzero_idx(jj); 
         Aij = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, j);
         A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
     end
 end
-A = A + A';
+% toc;
+
+% norm(A-B)
 % compute the diagonal
 for i=1:n
         Aii = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, i);
@@ -89,6 +108,8 @@ end %end compute_A_wittawat(..)
 function Aij = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, j)
     % lambda in the note. depend on i,j. n x n
     Lamb_ij = Ltilde - bsxfun(@plus, Ltilde(:, j), Ltilde(i, :)) + Ltilde(i, j);
+
+    %%
     % mu. depend on i,j. n x n 0-1 sparse matrix.
     % All mu_xxx are logical.
     Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
