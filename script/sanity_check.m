@@ -5,15 +5,20 @@ clear all;
 clc;
 close all;
 
-dx = 2; % dim(x)
-dy = 3; % dim(y)
+oldRng = rng();
+seednum =151;
+
+rng(seednum);
+
+dx = 3; % dim(x)
+dy = 4; % dim(y)
 n = 20;  % number of datapoints
 
 alpha = 1; % precision of X (zero-centering)
 gamma = 2; % noise precision in likelihood
-epsilon = 0.001;
+epsilon = 1e-3;
 
-%% (1) define a graph
+% (1) define a graph
 
 howmanyneighbors = 5;
 
@@ -237,7 +242,6 @@ end
 Ltilde = inv(epsilon*ones_n*ones_n' + 2*gamma*L);
 trQLtildeQtrpCtrpC = trace(Q*Ltilde*Q'*v'*v);
 display(sprintf('trace(Q Ltilde Qtrp Ctrp C)  : %.3f', trQLtildeQtrpCtrpC ));
-
 
 %% Then, see how to simplify A_E'*Sig_y*A_E , this will be beneficial in computing sufficient statistics later
 
@@ -717,5 +721,24 @@ toc;
 
 trGamma_without_pqCtrpC = trace(Gamma_without_pq*v'*v);
 display(sprintf('trace(Gamma without pq Ctrp C)  : %.3f', trGamma_without_pqCtrpC ));
+
+%% check inverse of Ltilde
+
+Ltilde = inv(epsilon*ones(n,1)*ones(1,n) + 2*gamma*L);
+
+[U_L, D_L, V_L] = svd(L); % L := U_L*D_L*V_L'
+
+D_L_inv = zeros(n,n);
+D_L_inv(1:n-1, 1:n-1) = diag(1./diag(D_L(1:n-1, 1:n-1)));
+
+Depsilon_inv = zeros(n,n);
+sign_sin_val = V_L(:,end)'*U_L(:,end); 
+Depsilon_inv(n,n) = sign_sin_val *1./(epsilon*n);
+
+invUsingSvd = V_L*Depsilon_inv*U_L' + 1./(2*gamma)*V_L*D_L_inv*U_L'; 
+
+norm(Ltilde-invUsingSvd)
+
+rng(oldRng);
 
 
