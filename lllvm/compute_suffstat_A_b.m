@@ -59,10 +59,9 @@ dx = size(mean_c,2)/n;
 % compute Ltilde : inv(epsilon*ones_n*ones_n' + 2*gamma*L)
 h = sum(G,2);
 L = diag(h) - G;
-ones_n = ones(n,1);
 % TODO Wittawat: Eventually we will replace the computation of Ltilde by inv with 
 % eigendecomposition.
-Ltilde = inv(epsilon*ones_n*ones_n' + 2*gamma*L); 
+Ltilde = inv(epsilon*ones(n, n) + 2*gamma*L); 
 
 % E[C^T C]: a n*dx x n*dx matrix
 ECTC = dy*cov_c + mean_c' * mean_c;
@@ -80,8 +79,8 @@ end
 A = A + A';
 % compute the diagonal
 for i=1:n
-        Aii = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, i);
-        A(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Aii;
+    Aii = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, i);
+    A(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Aii;
 end
 
 end %end compute_A_wittawat(..)
@@ -122,17 +121,6 @@ function Aij = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, j)
 end
 
 
-function mul = mat3d_times_vec(M, v)
-% M: a x b x c matrix 
-% v: c vector. Can be a row or column vector.
-% Output: a x b matrix = sum_i(M(:, :, i)*v(i))
-%
-[a, b, c] = size(M);
-assert(c==length(v));
-mul2d = reshape(M, [a*b, c])*v(:);
-mul = reshape(mul2d, [a, b]);
-
-end
 
 function A = compute_A_mijung(G, mean_c, cov_c,  Y, gamma, epsilon)
 
