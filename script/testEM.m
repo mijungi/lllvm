@@ -7,14 +7,17 @@ clc;
 
 maxseed = 100;
 seedpool = 1:maxseed;
-lwb_detector_alpha = zeros(maxseed,1);
+% lwb_detector_alpha = zeros(maxseed,1);
+lwb_detector_alpha_beta = zeros(maxseed,1);
 
 for seednum = 1:maxseed
     
     oldRng = rng();
+    % seednum = 2403;
+    
     rng(seednum);
     display(sprintf('seednum %d out of %d', seednum, maxseed));
-
+    
     %% (0) define essential quantities
     
     dx = 2; % dim(x)
@@ -32,8 +35,8 @@ for seednum = 1:maxseed
     alpha = 10*rand; % precision of X (zero-centering)
     gamma = 10*rand; % noise precision in likelihood
     
-    epsilon = 1e-4;
-    howmanyneighbors = (ceil(n/2*rand))+1; 
+    epsilon = 1e-3;
+    howmanyneighbors = (ceil(n/2*rand))+1;
     
     %% (1) generate data
     
@@ -48,8 +51,9 @@ for seednum = 1:maxseed
     mean_c = randn(dy, dx*n);
     
     % initialization for alpha, and update invPi
-    alpha_new = rand; 
+    alpha_new = rand;
     invPi_new = alpha_new*eye(n*dx) + invOmega;
+    gamma_new = rand;
     
     i_em = 1; % first EM iteration number
     variational_lwb = zeros(max_em_iter, 1); % storing lowerbound in each EM iteration.
@@ -63,7 +67,7 @@ for seednum = 1:maxseed
         covXmat = zeros(n*dx, max_em_iter);
         
         alphamat = zeros(max_em_iter,1);
-        %     gammamat  = zeros(max_em_iter,1);
+        gammamat  = zeros(max_em_iter,1);
         
         % partial lower bound from the likelihood term
         LB_like = zeros(max_em_iter, 1);
@@ -76,33 +80,43 @@ for seednum = 1:maxseed
     end
     
     J = kron(ones(n,1), eye(dx));
-    eigv_L = eig(L);
+    
+    opt_dec = 1; % using decomposition
+    [Ltilde] = compute_Ltilde(L, epsilon, gamma, opt_dec);
+    eigv_L = Ltilde.eigL;    % eigv_L = eig(L);
+    
+    % check if they match
+    %     norm( inv(epsilon*ones(n,1)*ones(1,n) + 2*gamma*L)-Ltilde.Ltilde)
     
     %% EM starts
     while (i_em<=max_em_iter)
         
-%         display(sprintf('EM iteration %d/%d', i_em, max_em_iter));
+        %         display(sprintf('EM iteration %d/%d', i_em, max_em_iter));
         
         %% (1) E step
         
         % compute mean and cov of x given c (eq.47 and 48)
-        [A, b] = compute_suffstat_A_b(G, mean_c, cov_c, Y, gamma, epsilon);
-        cov_x = inv(A+ invPi_new); 
+        [A, b] = compute_suffstat_A_b(G, mean_c, cov_c, Y, gamma_new, epsilon);
+        cov_x = inv(A+ invPi_new);
         mean_x = cov_x*b;
         
         % compute mean and cov of c given x (eq.56)
-        [Gamma, H] = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma, epsilon);
+        [Gamma, H] = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma_new, epsilon);
         cov_c = inv(Gamma + epsilon*J*J' + invOmega);
-        mean_c = gamma*H*cov_c';
+        mean_c = gamma_new*H*cov_c';
         
         %% (2) M step: we don't update hyperparameters. Just compute lower bound with new mean/cov of x and C
         
-        lwb_likelihood = exp_log_likeli(mean_c, cov_c, Gamma, H, Y, L, gamma, epsilon);
+        %         lwb_likelihood = exp_log_likeli(mean_c, cov_c, Gamma, H, Y, L, gamma, epsilon);
+        EXX = cov_x + mean_x * mean_x';
+        [lwb_likelihood, gamma_new] = exp_log_likeli_update_gamma(mean_c, cov_c, Gamma, H, Y, L, gamma_new, epsilon, Ltilde, G, EXX);
+        
         lwb_C = negDkl_C(mean_c, cov_c, invOmega, J, epsilon);
-        [lwb_x, alpha_new] = negDkl_x_update_alpha(mean_x, cov_x, invOmega, eigv_L); 
+        [lwb_x, alpha_new] = negDkl_x_update_alpha(mean_x, cov_x, invOmega, eigv_L);
         
         %% (2.half) update invPi using the new alpha
         invPi_new = alpha_new*eye(n*dx) + invOmega;
+        
         
         %% (3) compute the lower bound
         
@@ -120,6 +134,7 @@ for seednum = 1:maxseed
             covXmat(:,i_em) = diag(cov_x); % store only diag of cov, due to too large size!
             
             alphamat(i_em) = alpha_new;
+            gammamat(i_em) = gamma_new;
             
             LB_like(i_em) = lwb_likelihood;
             LB_C(i_em) = lwb_C;
@@ -132,16 +147,16 @@ for seednum = 1:maxseed
     end
     
     % this should be always 0, if lower bound doens't decrease
-    lwb_detector_alpha(seednum) = sum((diff(variational_lwb)<0)&(abs(diff(variational_lwb))>1e-3));
+    lwb_detector_alpha_beta(seednum) = sum((diff(variational_lwb)<0)&(abs(diff(variational_lwb))>1e-3));
     
-    display(sprintf('# decreasing lwb pts  : %.3f', lwb_detector_alpha(seednum)));
-
+    display(sprintf('# decreasing lwb pts  : %.3f', lwb_detector_alpha_beta(seednum)));
+    
     % change seed back
     rng(oldRng);
     
 end
 
-save lwb_detector_alpha lwb_detector_alpha
+save lwb_detector_alpha_beta lwb_detector_alpha_beta
 
 %%
 
