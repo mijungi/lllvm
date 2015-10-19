@@ -21,11 +21,11 @@ for seednum = 1:maxseed
     %% (0) define essential quantities
     
     dx = 2; % dim(x)
-    dy = 3; % dim(y)
-    n = 800;  % number of datapoints
+    dy = 5; % dim(y)
+    n = 200;  % number of datapoints
     
     % maximum number of EM iterations to perform
-    max_em_iter = 40;
+    max_em_iter = 5;
     
     % true/false to store result. If true, record all variables updated in every
     % EM iteration.
