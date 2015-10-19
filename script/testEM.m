@@ -5,7 +5,7 @@
 clear all;
 clc;
 
-maxseed = 2;
+maxseed = 1;
 seedpool = 1:maxseed;
 % lwb_detector_alpha = zeros(maxseed,1);
 lwb_detector_alpha_beta = zeros(maxseed,1);
@@ -22,7 +22,7 @@ for seednum = 1:maxseed
     
     dx = 2; % dim(x)
     dy = 3; % dim(y)
-    n = 20;  % number of datapoints
+    n = 100;  % number of datapoints
     
     % maximum number of EM iterations to perform
     max_em_iter = 40;
@@ -95,12 +95,16 @@ for seednum = 1:maxseed
         %% (1) E step
         
         % compute mean and cov of x given c (eq.47 and 48)
+        tic;
         [A, b] = compute_suffstat_A_b(G, mean_c, cov_c, Y, gamma_new, epsilon);
+        toc;
         cov_x = inv(A+ invPi_new);
         mean_x = cov_x*b;
         
         % compute mean and cov of c given x (eq.56)
+        tic;
         [Gamma, H] = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma_new, epsilon);
+        toc;
         cov_c = inv(Gamma + epsilon*J*J' + invOmega);
         mean_c = gamma_new*H*cov_c';
         
@@ -108,10 +112,16 @@ for seednum = 1:maxseed
         
         %         lwb_likelihood = exp_log_likeli(mean_c, cov_c, Gamma, H, Y, L, gamma, epsilon);
         EXX = cov_x + mean_x * mean_x';
+        tic;
         [lwb_likelihood, gamma_new] = exp_log_likeli_update_gamma(mean_c, cov_c, Gamma, H, Y, L, gamma_new, epsilon, Ltilde, G, EXX);
+        toc;
         
+        tic;
         lwb_C = negDkl_C(mean_c, cov_c, invOmega, J, epsilon);
+        toc;
+        tic;
         [lwb_x, alpha_new] = negDkl_x_update_alpha(mean_x, cov_x, invOmega, eigv_L);
+        toc;
         
         %% (2.half) update invPi using the new alpha
         invPi_new = alpha_new*eye(n*dx) + invOmega;
@@ -156,18 +166,18 @@ for seednum = 1:maxseed
     
 end
 
-save lwb_detector_alpha_beta lwb_detector_alpha_beta
+% save lwb_detector_alpha_beta lwb_detector_alpha_beta
 
 %%
 
-% figure(1);
-% subplot(211);
-% plotlearning(dx,dy,n,reshape(vc,dy,n*dx),Y);
-% subplot(212);
-% plotlearning(dx,dy,n,reshape(mean_c,dy,n*dx),Y);
-% figure(2);
-% subplot(211);
-% plot([vc(:) mean_c(:)]);
-% subplot(212);
-% plot([vx mean_x]);
+figure(1);
+subplot(211);
+plotlearning(dx,dy,n,reshape(vc,dy,n*dx),Y);
+subplot(212);
+plotlearning(dx,dy,n,reshape(mean_c,dy,n*dx),Y);
+figure(2);
+subplot(211);
+plot([vc(:) mean_c(:)]);
+subplot(212);
+plot([vx mean_x]);
 
