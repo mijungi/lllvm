@@ -70,17 +70,38 @@ h = sum(G,2);
 L = diag(h) - G;
 Ltilde = inv(epsilon*ones(n, n) + 2*gamma*L); 
 
-Gamma = zeros(n*dx, n*dx); 
-
 % computing the upper off-diagonal first 
+% tic;
+% Gamma = zeros(n*dx, n*dx); 
+% 
+% for i=1:n
+%     for j=i+1:n
+%         Gamij = compute_Gamij_wittawat(Ltilde, G, EXX_cell, gamma, i, j);
+%         Gamma(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij;
+%     end
+% end
+% Gamma = Gamma + Gamma'; 
+% toc;
+
+% tic;
+Gamma = zeros(n*dx, n*dx); 
 for i=1:n
-    for j=i+1:n
+
+    j_nonzero_idx = find(G(i,:));
+    j_nonzero_idx =  j_nonzero_idx(logical(j_nonzero_idx>i));
+    for jj=1:length(j_nonzero_idx)
+        j = j_nonzero_idx(jj); 
         Gamij = compute_Gamij_wittawat(Ltilde, G, EXX_cell, gamma, i, j);
         Gamma(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij;
     end
 end
 Gamma = Gamma + Gamma'; 
-clear j
+
+% toc;
+
+%%
+% clear j
+
 % compute the diagonal
 for i=1:n
     Gamii = compute_Gamij_wittawat(Ltilde, G, EXX_cell, gamma, i, i);
