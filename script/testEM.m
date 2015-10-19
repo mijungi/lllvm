@@ -5,7 +5,7 @@
 clear all;
 clc;
 
-maxseed = 100;
+maxseed = 2;
 seedpool = 1:maxseed;
 % lwb_detector_alpha = zeros(maxseed,1);
 lwb_detector_alpha_beta = zeros(maxseed,1);
@@ -91,7 +91,6 @@ for seednum = 1:maxseed
     %% EM starts
     while (i_em<=max_em_iter)
         
-        %         display(sprintf('EM iteration %d/%d', i_em, max_em_iter));
         
         %% (1) E step
         
@@ -121,9 +120,10 @@ for seednum = 1:maxseed
         %% (3) compute the lower bound
         
         variational_lwb(i_em) = lwb_likelihood + lwb_C + lwb_x; % eq.(21)+(22)+(23)
+        display(sprintf('EM it. %d/%d. lwb = %.3f', i_em, max_em_iter, variational_lwb(i_em)));
         
-        figure(102);
-        plot(1:i_em, variational_lwb(1:i_em), 'o-');
+        %figure(102);
+        %plot(1:i_em, variational_lwb(1:i_em), 'o-');
         
         % store results (all updated variables)
         if is_results_stored
