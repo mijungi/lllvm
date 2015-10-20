@@ -46,8 +46,6 @@ H = Yd*e1 -  e2 + e3;
 
 EXX = cov_x + mean_x * mean_x';
 
-Gamma_svd  = compute_Gamma_svd(G, EXX, Y, gamma, Ltilde_epsilon, Ltilde_L );
-
-Gamma = Gamma_svd; 
+Gamma = compute_Gamma_svd(G, EXX, Y, gamma, Ltilde_epsilon, Ltilde_L );
 
 end
