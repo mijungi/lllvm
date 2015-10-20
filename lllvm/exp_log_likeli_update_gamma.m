@@ -1,20 +1,18 @@
 %% update gamma and then compute log likelihood
 % mijung wrote on the 19th of Oct, 2015
 
-function [lwb_likelihood, gamma] = exp_log_likeli_update_gamma(mean_c, cov_c, Gamma, H, y, L, gamma, epsilon, Ltilde, G, EXX)
+function [lwb_likelihood, gamma] = exp_log_likeli_update_gamma(mean_c, cov_c, H, y, L, epsilon, Ltilde, QhatLtilde_epsilonQhat, QhatLtilde_LQhat )
 
 % Input:
 % mean_c: dy x n*dx
 % cov_c: n*dx x n*dx
-% Gamma: n*dx x n*dx
 % H: dy x n*dx 
 % y: observations, dy x n
 % L: laplacian matrix
-% gamma: noise precision
 % epsilon: a term added to eign val
-% Ltilde.Ltilde_epsilon
-% Ltilde.Ltilde_L
-% G : neighbourhood graph 
+% Ltilde.Ltilde_eigL
+% QhatLtilde_epsilonQhat : Gamma_epsilon
+% QhatLtilde_LQhat : Gamma_L
 
 % Output:
 % lwb_likelihood : Exp_q(x)q(C) log p(y|C,x)
@@ -44,13 +42,13 @@ n = size(L,1);
 %% new part
 
 
-Ltilde_epsilon = Ltilde.Ltilde_epsilon;
-Ltilde_L = Ltilde.Ltilde_L;
+% Ltilde_epsilon = Ltilde.Ltilde_epsilon;
+% Ltilde_L = Ltilde.Ltilde_L;
 eigL = Ltilde.eigL;
 
 % Qhat*Ltilde_epsilon*Qhat' 
 
-[~, QhatLtilde_epsilonQhat , QhatLtilde_LQhat ] = compute_Gamma_svd(G, EXX, y, gamma, Ltilde_epsilon, Ltilde_L ); 
+% [~, QhatLtilde_epsilonQhat , QhatLtilde_LQhat ] = compute_Gamma_svd(G, EXX, y, gamma, Ltilde_epsilon, Ltilde_L ); 
 
 % QhatLtilde_epsilonQhat = QhatLhatQhat(G, EXX, Ltilde_epsilon); 
 % QhatLtilde_LQhat = QhatLhatQhat(G, EXX, Ltilde_L); 
