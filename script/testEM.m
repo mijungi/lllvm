@@ -5,27 +5,27 @@
 clear all;
 clc;
 
-maxseed = 1;
-seedpool = 1:maxseed;
-% lwb_detector_alpha = zeros(maxseed,1);
-lwb_detector_alpha_beta = zeros(maxseed,1);
+% maxseed = 1;
+% seedpool = 1:maxseed;
+% % lwb_detector_alpha = zeros(maxseed,1);
+% lwb_detector_alpha_beta = zeros(maxseed,1);
 
-for seednum = 1:maxseed
+% for seednum = 1:maxseed
     
     oldRng = rng();
-    % seednum = 2403;
+    seednum = 203;
     
     rng(seednum);
-    display(sprintf('seednum %d out of %d', seednum, maxseed));
+%     display(sprintf('seednum %d out of %d', seednum, maxseed));
     
     %% (0) define essential quantities
     
     dx = 2; % dim(x)
-    dy = 5; % dim(y)
-    n = 200;  % number of datapoints
+    dy = 3; % dim(y)
+    n = 20;  % number of datapoints
     
     % maximum number of EM iterations to perform
-    max_em_iter = 5;
+    max_em_iter = 100;
     
     % true/false to store result. If true, record all variables updated in every
     % EM iteration.
@@ -51,7 +51,7 @@ for seednum = 1:maxseed
     mean_c = randn(dy, dx*n);
     
     % initialization for alpha, and update invPi
-    alpha_new = rand;
+    alpha_new = 10*rand;
     invPi_new = alpha_new*eye(n*dx) + invOmega;
     gamma_new = rand;
     
@@ -100,30 +100,27 @@ for seednum = 1:maxseed
         mean_x = cov_x*b;
         
         % compute mean and cov of c given x (eq.56)
-        [Gamma, H] = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma_new, epsilon);
+        [Gamma, H, EXX] = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma_new, Ltilde);
         cov_c = inv(Gamma + epsilon*J*J' + invOmega);
         mean_c = gamma_new*H*cov_c';
         
         %% (2) M step: we don't update hyperparameters. Just compute lower bound with new mean/cov of x and C
         
-        %         lwb_likelihood = exp_log_likeli(mean_c, cov_c, Gamma, H, Y, L, gamma, epsilon);
-        EXX = cov_x + mean_x * mean_x';
         [lwb_likelihood, gamma_new] = exp_log_likeli_update_gamma(mean_c, cov_c, Gamma, H, Y, L, gamma_new, epsilon, Ltilde, G, EXX);
-        
         lwb_C = negDkl_C(mean_c, cov_c, invOmega, J, epsilon);
         [lwb_x, alpha_new] = negDkl_x_update_alpha(mean_x, cov_x, invOmega, eigv_L);
 
         %% (2.half) update invPi using the new alpha
-        invPi_new = alpha_new*eye(n*dx) + invOmega;
         
+        invPi_new = alpha_new*eye(n*dx) + invOmega;
         
         %% (3) compute the lower bound
         
         variational_lwb(i_em) = lwb_likelihood + lwb_C + lwb_x; % eq.(21)+(22)+(23)
         display(sprintf('EM it. %d/%d. lwb = %.3f', i_em, max_em_iter, variational_lwb(i_em)));
         
-        %figure(102);
-        %plot(1:i_em, variational_lwb(1:i_em), 'o-');
+        figure(102);
+        plot(1:i_em, variational_lwb(1:i_em), 'o-');
         
         % store results (all updated variables)
         if is_results_stored
@@ -154,7 +151,7 @@ for seednum = 1:maxseed
     % change seed back
     rng(oldRng);
     
-end
+% end
 
 % save lwb_detector_alpha_beta lwb_detector_alpha_beta
 
