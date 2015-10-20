@@ -3,7 +3,7 @@
 % Mijung wrote
 % Oct 14, 2015
 
-function [Gamma, H] = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma, epsilon)
+function [Gamma, H, EXX] = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma, Ltilde)
 
 % inputs
 % (1) G: adjacency matrix
@@ -12,17 +12,21 @@ function [Gamma, H] = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma, epsil
 % (4) Y : observations, size of (dy, n)
 % (5) gamma: noise precision in likelihood
 % (6) epsilon: a constant term added to prior precision for C
+% (7) Ltilde.Ltilde_epsilon, Ltilde.Ltilde_L
 
 % outputs
 % (1) Gamma: eq(64)
 % (2) H : eq(66)
+% (3) EXX :  cov_x + mean_x * mean_x'
 
 % unpack essential quantities
 [dy, n] = size(Y);
 dx = size(cov_x,2)/n;
 
-h = sum(G,2);
+Ltilde_epsilon = Ltilde.Ltilde_epsilon;
+Ltilde_L = Ltilde.Ltilde_L;
 
+h = sum(G,2);
 
 % (1) computing H
 
@@ -39,11 +43,18 @@ e3 = ( repmat(h',dy,1).*Yd  )*( kronINones .* repmat(mean_x',n,1) );
 H = Yd*e1 -  e2 + e3;
 
 % (2) computing Gamma
+
+EXX = cov_x + mean_x * mean_x';
+
 %Gamma_mi  = compute_Gamma_mijung(G, mean_x, cov_x, Y, gamma, epsilon);
-Gamma_wi  = compute_Gamma_wittawat(G, mean_x, cov_x, Y, gamma, epsilon );
+% Gamma_wi  = compute_Gamma_wittawat(G, mean_x, cov_x, Y, gamma, epsilon );
+Gamma_svd  = compute_Gamma_svd(G, EXX, Y, gamma, Ltilde_epsilon, Ltilde_L );
+
 %display(sprintf('norm(Gamma_mi - Gamma_wi, fro) = %.3g', norm(Gamma_mi-Gamma_wi, 'fro')));
 %Gamma = Gamma_mi;
-Gamma = Gamma_wi;
+% Gamma = Gamma_wi;
+Gamma = Gamma_svd; 
+
 end
 
 function [Gamma ] = compute_Gamma_wittawat(G, mean_x, cov_x, Y, gamma, epsilon )
@@ -72,30 +83,30 @@ Ltilde = inv(epsilon*ones(n, n) + 2*gamma*L);
 
 % computing the upper off-diagonal first 
 % tic;
-% Gamma = zeros(n*dx, n*dx); 
-% 
-% for i=1:n
-%     for j=i+1:n
-%         Gamij = compute_Gamij_wittawat(Ltilde, G, EXX_cell, gamma, i, j);
-%         Gamma(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij;
-%     end
-% end
-% Gamma = Gamma + Gamma'; 
-% toc;
-
-% tic;
 Gamma = zeros(n*dx, n*dx); 
-for i=1:n
 
-    j_nonzero_idx = find(G(i,:));
-    j_nonzero_idx =  j_nonzero_idx(logical(j_nonzero_idx>i));
-    for jj=1:length(j_nonzero_idx)
-        j = j_nonzero_idx(jj); 
+for i=1:n
+    for j=i+1:n
         Gamij = compute_Gamij_wittawat(Ltilde, G, EXX_cell, gamma, i, j);
         Gamma(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij;
     end
 end
 Gamma = Gamma + Gamma'; 
+% toc;
+
+% tic;
+% Gamma = zeros(n*dx, n*dx); 
+% for i=1:n
+% 
+%     j_nonzero_idx = find(G(i,:));
+%     j_nonzero_idx =  j_nonzero_idx(logical(j_nonzero_idx>i));
+%     for jj=1:length(j_nonzero_idx)
+%         j = j_nonzero_idx(jj); 
+%         Gamij = compute_Gamij_wittawat(Ltilde, G, EXX_cell, gamma, i, j);
+%         Gamma(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij;
+%     end
+% end
+% Gamma = Gamma + Gamma'; 
 
 % toc;
 
