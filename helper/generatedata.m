@@ -30,14 +30,18 @@ function [vy, Y, vc, C, vx, X, G,  L, invOmega] = generatedata(dy, dx, n, alpha,
 % howmanyneighbors = 5;
 
 % adjacency matrix
-G = zeros(n,n,howmanyneighbors-1);
+% G = zeros(n,n,howmanyneighbors-1);
+% 
+% for i=1:howmanyneighbors-1
+%     G(:,:,i) = diag(ones(n-i,1),i);
+%     G(:,:,i) = G(:,:,i) + G(:,:,i)';
+% end
+% 
+% G = sum(G,3);
 
-for i=1:howmanyneighbors-1
-    G(:,:,i) = diag(ones(n-i,1),i);
-    G(:,:,i) = G(:,:,i) + G(:,:,i)';
-end
-
-G = sum(G,3);
+Yfake_for_generating_G = randn(dy, n);
+G = makeKnnG(Yfake_for_generating_G, howmanyneighbors); 
+% [G, ~] = makeG(Yfake_for_generating_G, n,dy, howmanyneighbors);
 
 h = sum(G,2);
 % laplacian matrix
