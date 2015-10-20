@@ -49,8 +49,11 @@ Ltilde_L = Ltilde.Ltilde_L;
 eigL = Ltilde.eigL;
 
 % Qhat*Ltilde_epsilon*Qhat' 
-QhatLtilde_epsilonQhat = QhatLhatQhat(G, EXX, Ltilde_epsilon); 
-QhatLtilde_LQhat = QhatLhatQhat(G, EXX, Ltilde_L); 
+
+[~, QhatLtilde_epsilonQhat , QhatLtilde_LQhat ] = compute_Gamma_svd(G, EXX, y, gamma, Ltilde_epsilon, Ltilde_L ); 
+
+% QhatLtilde_epsilonQhat = QhatLhatQhat(G, EXX, Ltilde_epsilon); 
+% QhatLtilde_LQhat = QhatLhatQhat(G, EXX, Ltilde_L); 
 
 % make sure if these two terms are the same
 secondmoment = dy*cov_c + mean_c'*mean_c;
