@@ -12,7 +12,7 @@ mean_x2 = mean_x(:)'*mean_x(:);
 tr_cov_x = trace(cov_x);
 
 % alpha update
-eigv_L = eigv_L(1:end-1); % picking up nonzero eigenvalues
+% eigv_L = eigv_L(1:end-1); % picking up nonzero eigenvalues
 min_obj = @(a) -( dx*sum(log(a + 2*eigv_L)) - a*tr_cov_x - a*mean_x2 );
 opt = struct();
 opt.TolX = 1e-4;
