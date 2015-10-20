@@ -11,12 +11,12 @@ Gamma = zeros(n*dx, n*dx);
 % computing the upper off-diagonal first 
 for i=1:n
     
-    j_nonzero_idx = find(G(i,:));
-    j_nonzero_idx =  j_nonzero_idx(logical(j_nonzero_idx>i));
-    for jj=1:length(j_nonzero_idx)
-        j = j_nonzero_idx(jj);
+%     j_nonzero_idx = find(G(i,:));
+%     j_nonzero_idx =  j_nonzero_idx(logical(j_nonzero_idx>i));
+%     for jj=1:length(j_nonzero_idx)
+%         j = j_nonzero_idx(jj);
     
-%      for j=i+1:n
+     for j=i+1:n
         
         nonzero_p = find(G(i,:));
         nonzero_q = find(G(j,:));
