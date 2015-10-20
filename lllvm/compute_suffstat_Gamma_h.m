@@ -3,7 +3,7 @@
 % Mijung wrote
 % Oct 14, 2015
 
-function [Gamma, H, EXX] = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma, Ltilde)
+function [Gamma, H, Gamma_epsilon, Gamma_L] = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma, Ltilde)
 
 % inputs
 % (1) G: adjacency matrix
@@ -17,7 +17,8 @@ function [Gamma, H, EXX] = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma, 
 % outputs
 % (1) Gamma: eq(64)
 % (2) H : eq(66)
-% (3) EXX :  cov_x + mean_x * mean_x'
+% (3) Gamma_epsilon
+% (4) Gamma_L
 
 % unpack essential quantities
 [dy, n] = size(Y);
@@ -46,6 +47,6 @@ H = Yd*e1 -  e2 + e3;
 
 EXX = cov_x + mean_x * mean_x';
 
-Gamma = compute_Gamma_svd(G, EXX, Y, gamma, Ltilde_epsilon, Ltilde_L );
+[Gamma, Gamma_epsilon, Gamma_L ] = compute_Gamma_svd(G, EXX, Y, gamma, Ltilde_epsilon, Ltilde_L );
 
 end
