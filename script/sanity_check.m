@@ -10,9 +10,9 @@ seednum =151;
 
 rng(seednum);
 
-dx = 3; % dim(x)
-dy = 4; % dim(y)
-n = 20;  % number of datapoints
+dx = 2; % dim(x)
+dy = 3; % dim(y)
+n = 50;  % number of datapoints
 
 alpha = 1; % precision of X (zero-centering)
 gamma = 2; % noise precision in likelihood
@@ -20,17 +20,20 @@ epsilon = 1e-3;
 
 % (1) define a graph
 
-howmanyneighbors = 5;
+howmanyneighbors = 10;
+
+Y = randn(dy, n);
+G = makeKnnG(Y, howmanyneighbors);
 
 % adjacency matrix
-G = zeros(n,n,howmanyneighbors-1);
-
-for i=1:howmanyneighbors-1
-    G(:,:,i) = diag(ones(n-i,1),i);
-    G(:,:,i) = G(:,:,i) + G(:,:,i)';
-end
-
-G = sum(G,3);
+% G = zeros(n,n,howmanyneighbors-1);
+%
+% for i=1:howmanyneighbors-1
+%     G(:,:,i) = diag(ones(n-i,1),i);
+%     G(:,:,i) = G(:,:,i) + G(:,:,i)';
+% end
+%
+% G = sum(G,3);
 
 h = sum(G,2);
 % laplacian matrix
@@ -186,7 +189,11 @@ display(sprintf('x trp b: %.3f',xb ));
 
 cov_x = 1e-6*eye(n*dx);
 % [~, H] = compute_invGamma_qX_and_H_qX(G, x(:), cov_x, y, n, dy, dx);
-[~, H] = compute_suffstat_Gamma_h(G, x(:), cov_x, Y, gamma, epsilon); 
+% [~, H] = compute_suffstat_Gamma_h(G, x(:), cov_x, Y, gamma, epsilon);
+opt_dec = 1; % using decomposition
+[Ltilde] = compute_Ltilde(L, epsilon, gamma, opt_dec);
+[~, H]  = compute_suffstat_Gamma_h(G, x(:), cov_x, Y, gamma, Ltilde);
+
 trCVinvH = trace(v'*invV*H);
 display(sprintf('tra(CtrpinvVH): %.3f', trCVinvH ));
 
@@ -326,7 +333,7 @@ display(sprintf('trace(Gamma Ctrp C)  : %.3f', trGammaCtrpC ));
 mean_c = v;
 cov_c = 1e-6*eye(dx*n);
 
-ECC = cov_c + mean_c' * mean_c;
+ECC = dy*cov_c + mean_c' * mean_c;
 
 Aij_full = zeros(n*dx, n*dx);
 
@@ -445,14 +452,9 @@ display(sprintf('x trp Aij full x  : %.3f', xtrpAijfullx  ));
 
 % to remove the two for-loops for k and k'
 
-mean_c = v;
-cov_c = 1e-6*eye(dx*n);
-
-ECC = cov_c + mean_c' * mean_c;
-
 Aij_pq_only = zeros(n*dx, n*dx);
 
-tic; 
+tic;
 for i=1:n
     
     for j=1:n
@@ -495,24 +497,19 @@ toc;
 xtrpAijpqonlyx = x(:)'*Aij_pq_only*x(:);
 display(sprintf('x trp Aij pq only x  : %.3f', xtrpAijpqonlyx  ));
 
-%% eq (58) without the for-loops for p and q 
+%% eq (58) without the for-loops for p and q
 
-tic; 
+tic;
 
-mean_c = v;
-cov_c = 1e-6*eye(dx*n);
-
-ECC = cov_c + mean_c' * mean_c;
-
-Aij_without_pq = zeros(n*dx, n*dx); 
+Aij_without_pq = zeros(n*dx, n*dx);
 
 for i=1:n
     for j=i+1:n
         nonzero_p = find(G(i,:));
         nonzero_q = find(G(j,:));
         
-        sum_ECC = compute_sum_ECC(nonzero_p, nonzero_q, i, j, Ltilde, ECC); 
-
+        sum_ECC = compute_sum_ECC(nonzero_p, nonzero_q, i, j, Ltilde, ECC);
+        
         Ltilde_pq = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, ECC, 'pq');
         Ltilde_pj = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, ECC, 'pj');
         Ltilde_iq = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, ECC, 'iq');
@@ -533,12 +530,12 @@ for i=1:n
         ECC_cell_for_sum = mat2cell(Ltilde_ij.*sum_ECC, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
         ECC_mat_for_sum = reshape([ECC_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
         Ltilde_ECC_ij = sum(ECC_mat_for_sum, 3);
-
+        
         Aij_without_pq(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = gamma^2*(Ltilde_ECC_pq - Ltilde_ECC_pj - Ltilde_ECC_iq + Ltilde_ECC_ij);
     end
 end
 
-Aij_without_pq = Aij_without_pq + Aij_without_pq'; 
+Aij_without_pq = Aij_without_pq + Aij_without_pq';
 
 for i=1:n
     j =i;
@@ -578,43 +575,43 @@ display(sprintf('x trp Aij without pq x  : %.3f', xtrpAijwithoutpqx  ));
 
 %% this was for checking each term in Aij_without_pq
 
-% 
+%
 % i = 18;
 % j = 1;
-% 
+%
 % nonzero_p = find(G(i,:));
 % nonzero_q = find(G(j,:));
 % whichterm = 'ij';
-% 
+%
 % %  'pq' computes : sum_p sum_q Ltilde(p,q) eta_pi eta_qj <CpCq + CpCj + CiCq + CiCj>
 % Ltilde_ECC = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, ECC, whichterm);
 
 
 % mean_c = v;
 % cov_c = 1e-6*eye(dx*n);
-% 
+%
 % ECC = cov_c + mean_c' * mean_c;
-% 
+%
 % Ltilde_i_j = Ltilde(i,j);
 % Aij = zeros(dx, dx);
-% 
+%
 % for p=1:n
-%     
+%
 %     eta_pi = G(p,i);
 %     Ltilde_p_j = Ltilde(p, j);
-%     
+%
 %     for q=1:n
-%         
+%
 %         eta_qj = G(q,j);
-%         
+%
 %         Ltilde_p_q = Ltilde(p, q);
 %         Ltilde_q_i = Ltilde(q, i);
-%         
+%
 %         CpCq = ECC(1+(p-1)*dx:p*dx, 1+(q-1)*dx:q*dx);
 %         CpCj = ECC(1+(p-1)*dx:p*dx, 1+(j-1)*dx:j*dx);
 %         CiCq = ECC(1+(i-1)*dx:i*dx, 1+(q-1)*dx:q*dx);
 %         CiCj = ECC(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx);
-%         
+%
 %         if strcmp(whichterm, 'pq')
 %             Aij_tmp =  eta_pi*eta_qj*(Ltilde_p_q )*(CpCq + CpCj + CiCq + CiCj);
 %         elseif strcmp(whichterm, 'pj')
@@ -628,12 +625,12 @@ display(sprintf('x trp Aij without pq x  : %.3f', xtrpAijwithoutpqx  ));
 %         end
 %         %         Aij_tmp =  gamma^2*eta_pi*eta_qj*(Ltilde_p_q - Ltilde_p_j - Ltilde_q_i + Ltilde_i_j )*(CpCq + CpCj + CiCq + CiCj);
 %         Aij = Aij  + Aij_tmp;
-%         
+%
 %     end
-%     
+%
 % end
-% 
-% 
+%
+%
 % norm(Ltilde_ECC-Aij)
 
 
@@ -647,7 +644,7 @@ cov_x = 1e-6*eye(dx*n);
 
 EXX = cov_x + mean_x * mean_x';
 
-Gamma_without_pq = zeros(n*dx, n*dx); 
+Gamma_without_pq = zeros(n*dx, n*dx);
 tic;
 
 for i=1:n
@@ -655,8 +652,8 @@ for i=1:n
         nonzero_p = find(G(i,:));
         nonzero_q = find(G(j,:));
         
-        sum_EXX = compute_sum_EXX(nonzero_p, nonzero_q, i, j, Ltilde, EXX); 
-
+        sum_EXX = compute_sum_EXX(nonzero_p, nonzero_q, i, j, Ltilde, EXX);
+        
         Ltilde_pq = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, EXX, 'pq');
         Ltilde_pj = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, EXX, 'pj');
         Ltilde_iq = compute_Ltilde_CC(nonzero_p, nonzero_q, i, j, Ltilde, EXX, 'iq');
@@ -677,12 +674,12 @@ for i=1:n
         EXX_cell_for_sum = mat2cell(Ltilde_ij.*sum_EXX, dx*ones(length(nonzero_p),1), dx*ones(length(nonzero_q),1));
         EXX_mat_for_sum = reshape([EXX_cell_for_sum{:}], dx, dx, length(nonzero_p)*length(nonzero_q));
         Ltilde_EXX_ij = sum(EXX_mat_for_sum, 3);
-
+        
         Gamma_without_pq(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = gamma^2*(Ltilde_EXX_pq - Ltilde_EXX_pj - Ltilde_EXX_iq + Ltilde_EXX_ij);
     end
 end
 
-Gamma_without_pq = Gamma_without_pq + Gamma_without_pq'; 
+Gamma_without_pq = Gamma_without_pq + Gamma_without_pq';
 
 for i=1:n
     j=i;
@@ -732,13 +729,85 @@ D_L_inv = zeros(n,n);
 D_L_inv(1:n-1, 1:n-1) = diag(1./diag(D_L(1:n-1, 1:n-1)));
 
 Depsilon_inv = zeros(n,n);
-sign_sin_val = V_L(:,end)'*U_L(:,end); 
+sign_sin_val = V_L(:,end)'*U_L(:,end);
 Depsilon_inv(n,n) = sign_sin_val *1./(epsilon*n);
 
-invUsingSvd = V_L*Depsilon_inv*U_L' + 1./(2*gamma)*V_L*D_L_inv*U_L'; 
+invUsingSvd = V_L*Depsilon_inv*U_L' + 1./(2*gamma)*V_L*D_L_inv*U_L';
 
 norm(Ltilde-invUsingSvd)
 
 rng(oldRng);
+
+%% try to avoid looping over i and j when computing <A> and <Gamma>
+
+% first, let's compute A.
+
+mean_c = v;
+cov_c = 1e-6*eye(dx*n);
+
+ECC = dy*cov_c + mean_c' * mean_c;
+
+Ltilde = inv(epsilon*ones(n,1)*ones(1,n) + 2*gamma*L);
+
+tic; 
+ECTC_cell = mat2cell(ECC, dx*ones(1, n), dx*ones(1, n));
+
+A = zeros(n*dx, n*dx);
+
+for i=1:n
+    for j=i+1:n
+        
+        Lamb_ij = Ltilde;
+        Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
+        
+        % T1
+        % dx x dx x #1's in Mu_ij
+        T1_blocks = cat(3, ECTC_cell{Mu_ij});
+        T1_ij = mat3d_times_vec(T1_blocks, Lamb_ij(Mu_ij));
+        
+        A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = T1_ij;
+    end
+end
+
+
+A = A + A';
+
+% compute the diagonal
+for i=1:n
+        Lamb_ij = Ltilde;
+        Mu_ij = logical(sparse(G(:, i))*sparse(G(i, :)));
+        
+        % T1
+        % dx x dx x #1's in Mu_ij
+        T1_blocks = cat(3, ECTC_cell{Mu_ij});
+        T1_ij = mat3d_times_vec(T1_blocks, Lamb_ij(Mu_ij));
+        
+    A(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = T1_ij;
+end
+toc;
+
+%%
+
+tic; 
+
+ECTC = repmat(ECC, n, n); 
+
+idx_nonzero = kron(sparse(G(:))*sparse(G(:))', ones(dx, dx));
+Ltilde_rep = repmat(kron(Ltilde, ones(dx,dx)), n,n);
+Ltilde_nonzero = Ltilde_rep.*idx_nonzero; 
+
+bigmat = (ECTC.*Ltilde_rep).*idx_nonzero;
+
+JJ = sparse(kron(ones(n,1), eye(dx))); 
+Jmat = sparse(kron(eye(n), JJ));
+Aij_mat = Jmat'*bigmat*Jmat;
+
+toc; 
+
+% norm(Aij_mat-A)
+
+
+
+
 
 
