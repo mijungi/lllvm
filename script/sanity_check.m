@@ -12,7 +12,7 @@ rng(seednum);
 
 dx = 2; % dim(x)
 dy = 3; % dim(y)
-n = 50;  % number of datapoints
+n = 5;  % number of datapoints
 
 alpha = 1; % precision of X (zero-centering)
 gamma = 2; % noise precision in likelihood
@@ -20,7 +20,7 @@ epsilon = 1e-3;
 
 % (1) define a graph
 
-howmanyneighbors = 10;
+howmanyneighbors = 2;
 
 Y = randn(dy, n);
 G = makeKnnG(Y, howmanyneighbors);
@@ -806,6 +806,16 @@ toc;
 
 % norm(Aij_mat-A)
 
+%%
+i=2;
+j = 3;
+
+Gij = G(i,:)'*G(j,:);
+LtildeGij = Ltilde.*Gij;
+kronLtilde = kron(LtildeGij, ones(dx,dx));
+JJ = kron(ones(n,1), eye(dx)); 
+
+JJ'*(ECC.*kronLtilde)*JJ
 
 
 
