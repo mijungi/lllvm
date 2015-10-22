@@ -5,7 +5,7 @@
 clear;
 clc;
 
-n = 800; % total number of datapoints
+n = 200; % total number of datapoints
 
 % select data flag
 data_flag = 1; % 3D Gaussian
@@ -110,7 +110,7 @@ for seednum = 1:maxseed
     
     opt_dec = 1; % using decomposition
     [Ltilde] = compute_Ltilde(L, epsilon, gamma_new, opt_dec);
-    eigv_L = Ltilde.eigL;    % eigv_L = eig(L);
+    eigv_L = eig(L);
     
     % check if they match
     %     norm( inv(epsilon*ones(n,1)*ones(1,n) + 2*gamma*L)-Ltilde.Ltilde)
@@ -137,17 +137,17 @@ for seednum = 1:maxseed
         
         %% (2) M step: we don't update hyperparameters. Just compute lower bound with new mean/cov of x and C
         
-        tStart = tic;
+%         tStart = tic;
         [lwb_likelihood, gamma_new] = exp_log_likeli_update_gamma(mean_c, cov_c, H, Y, L, epsilon, Ltilde, Gamma_epsilon, Gamma_L);
-        display(sprintf('M step : gamma update took %3f', toc(tStart)));
+%         display(sprintf('M step : gamma update took %3f', toc(tStart)));
         
-        tStart = tic;
+%         tStart = tic;
         lwb_C = negDkl_C(mean_c, cov_c, invOmega, J, epsilon);
-        display(sprintf('M step : KL_C took %3f', toc(tStart)));
+%         display(sprintf('M step : KL_C took %3f', toc(tStart)));
         
-        tStart = tic;
+%         tStart = tic;
         [lwb_x, alpha_new] = negDkl_x_update_alpha(mean_x, cov_x, invOmega, eigv_L);
-        display(sprintf('M step : alpha update took %3f', toc(tStart)));
+%         display(sprintf('M step : alpha update took %3f', toc(tStart)));
         
         %% (2.half) update invPi using the new alpha
         
@@ -198,14 +198,14 @@ end
 
 %%
 
-% figure(1);
-% which = 1;
-% plotlearning(dx,dy,n,reshape(meanCmat(:,which),dy,n*dx),Y);
-% 
-% figure(3);
-% subplot(211); scatter(truex(1,:), truex(2,:), 20, col, 'o', 'filled');
-% reshaped_mean_x = reshape(meanXmat(:,which), dx, []);
-% subplot(212); scatter(reshaped_mean_x(1,:), reshaped_mean_x(2,:), 20, col, 'o', 'filled');
+figure(1);
+which = 1;
+plotlearning(dx,dy,n,reshape(meanCmat(:,which),dy,n*dx),Y);
+
+figure(3);
+subplot(211); scatter(truex(1,:), truex(2,:), 20, col, 'o', 'filled');
+reshaped_mean_x = reshape(meanXmat(:,which), dx, []);
+subplot(212); scatter(reshaped_mean_x(1,:), reshaped_mean_x(2,:), 20, col, 'o', 'filled');
 
 
 % subplot(212);
