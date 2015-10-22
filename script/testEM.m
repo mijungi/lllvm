@@ -2,7 +2,7 @@
 % with the derivation written in Adding_Epsilon_on_L.pdf
 % Mijung wrote on Oct 15, 2015
 
-clear all;
+clear;
 clc;
 
 % maxseed = 1;
@@ -18,12 +18,6 @@ seednum = 203;
 rng(seednum);
 %     display(sprintf('seednum %d out of %d', seednum, maxseed));
 
-%% (0) define essential quantities
-
-dx = 2; % dim(x)
-dy = 3; % dim(y)
-n = 200;  % number of datapoints
-
 % maximum number of EM iterations to perform
 max_em_iter = 100;
 
@@ -31,18 +25,49 @@ max_em_iter = 100;
 % EM iteration.
 is_results_stored = true;
 
-% parameters
-alpha = 10*rand; % precision of X (zero-centering)
-gamma = 10*rand; % noise precision in likelihood
 
-epsilon = 1e-3;
-howmanyneighbors = (ceil(n/2*rand))+1;
+%% generate data from the true model
 
-%% (1) generate data
+% dx = 2; % dim(x)
+% dy = 3; % dim(y)
+% n = 400;  % number of datapoints
+% 
+% 
+% % parameters
+% alpha = 10*rand; % precision of X (zero-centering)
+% gamma = 10*rand; % noise precision in likelihood
+% 
+% epsilon = 1e-3;
+% howmanyneighbors = 20; 
+% 
+% [vy, Y, vc, C, vx, X, G,  L, invOmega] = generatedata(dy, dx, n, alpha, gamma, epsilon, howmanyneighbors);
+% 
+% invPi = alpha*eye(n*dx) + invOmega;
 
-[vy, Y, vc, C, vx, X, G,  L, invOmega] = generatedata(dy, dx, n, alpha, gamma, epsilon, howmanyneighbors);
+%%  or artificial data
 
-invPi = alpha*eye(n*dx) + invOmega;
+% for Swiss roll
+data_flag = 3; 
+n = 200;
+k = 6;
+dx = 2;
+
+[n, dy, Y, G, dmat, col, truex] = getartificial(n, data_flag, k);
+
+Y = reshape(Y,dy,n);
+G = makeKnnG(Y, k);
+h = sum(G,2);
+
+L = diag(h) - G; % laplacian matrix
+
+invOmega = kron(2*L,eye(dx));
+epsilon = 1e-3; 
+
+%%
+% plot the raw data
+figure(200);
+subplot(221); scatter3( Y(1,:) , Y(2,:) , Y(3,:) , [] , col , 'o', 'filled');
+subplot(223); scatter(truex(1,:), truex(2,:), 20, col, 'o', 'filled');
 
 %% (2) EM
 
@@ -82,7 +107,7 @@ end
 J = kron(ones(n,1), eye(dx));
 
 opt_dec = 1; % using decomposition
-[Ltilde] = compute_Ltilde(L, epsilon, gamma, opt_dec);
+[Ltilde] = compute_Ltilde(L, epsilon, gamma_new, opt_dec);
 eigv_L = Ltilde.eigL;    % eigv_L = eig(L);
 
 % check if they match
@@ -95,7 +120,7 @@ while (i_em<=max_em_iter)
     %% (1) E step
     
     % compute mean and cov of x given c (eq.47 and 48)
-    tStart = tic;
+    tStart = tic;    
     [A, b] = compute_suffstat_A_b(G, mean_c, cov_c, Y, gamma_new, epsilon);
     cov_x = inv(A+ invPi_new);
     mean_x = cov_x*b;
@@ -103,7 +128,7 @@ while (i_em<=max_em_iter)
 
     tStart = tic;
     % compute mean and cov of c given x (eq.56)
-     [Gamma, H, Gamma_epsilon, Gamma_L]  = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma_new, Ltilde);
+    [Gamma, H, Gamma_epsilon, Gamma_L]  = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma_new, Ltilde);
     cov_c = inv(Gamma + epsilon*J*J' + invOmega);
     mean_c = gamma_new*H*cov_c';
     display(sprintf('E step : q(C) took %3f', toc(tStart)));
