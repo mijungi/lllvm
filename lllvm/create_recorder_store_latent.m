@@ -121,7 +121,7 @@ function [rec_v] = latent_params(state )
         % iteration numbers corresponding to the variables recorded.
         rec_vars.i_ems = [];
         rec_vars.alphas = [];
-        rec_vars.betas = [];
+%         rec_vars.betas = [];
         rec_vars.gammas = [];
         % lower bound values
         rec_vars.lwbs = [];
@@ -135,7 +135,7 @@ function [rec_v] = latent_params(state )
     % always store alpha, beta, gamma, and lwb in every iteration.
     %
     rec_vars.alphas(end+1) = state.alpha;
-    rec_vars.betas(end+1) = state.beta;
+%     rec_vars.betas(end+1) = state.beta;
     rec_vars.gammas(end+1) = state.gamma;
     rec_vars.lwbs(end+1) = state.lwb;
 
