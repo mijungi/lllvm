@@ -72,8 +72,8 @@ if use_scaled_identity_check && are_subblocks_scaled_identity(EXX_cell)
 
             % check with the full version
             %if true 
-            %    Gamij_epsilon_full = compute_Gamij_svd(Ltilde_epsilon, G, EXX_cell, i, j);
-            %    Gamij_L_full = compute_Gamij_svd(Ltilde_L, G, EXX_cell, i, j);
+            %    Gamij_epsilon_full = compute_Gamij_svd2(Ltilde_epsilon, G, EXX_cell, i, j);
+            %    Gamij_L_full = compute_Gamij_svd2(Ltilde_L, G, EXX_cell, i, j);
             %    display(sprintf('|Gamij_ep - Gamij_ep_full|_fro = %.5g', ...
             %        norm(Gamij_epsilon-Gamij_epsilon_full) ));
             %    display(sprintf('|Gamij_L - Gamij_L_full|_fro = %.5g', ...
@@ -97,10 +97,15 @@ else
 
     for i=1:n
         for j=i+1:n
-            Gamij_epsilon = compute_Gamij_svd(Ltilde_epsilon, G, EXX_cell, i, j);
-            Gamij_L = compute_Gamij_svd(Ltilde_L, G, EXX_cell, i, j);
+            Gamij_epsilon = compute_Gamij_svd2(Ltilde_epsilon, G, EXX_cell, i, j);
+            Gamij_L = compute_Gamij_svd2(Ltilde_L, G, EXX_cell, i, j);
             Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_epsilon;
             Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
+
+            Gamij_epsilon2 = compute_Gamij_svd2(Ltilde_epsilon, G, EXX_cell, i, j);
+            Gamij_L2 = compute_Gamij_svd2(Ltilde_L, G, EXX_cell, i, j);
+            %display(sprintf('|Gamij_ep - Gamij_ep2| = %.6f', norm(Gamij_epsilon-Gamij_epsilon2)));
+            %display(sprintf('|Gamij_L - Gamij_L2| = %.6f', norm(Gamij_L-Gamij_L2)));
         end
     end
     Gamma_epsilon = Gamma_epsilon + Gamma_epsilon';
@@ -108,8 +113,8 @@ else
     clear j
     % compute the diagonal
     for i=1:n
-        Gamii_epsilon = compute_Gamij_svd(Ltilde_epsilon, G, EXX_cell, i, i);
-        Gamii_L = compute_Gamij_svd(Ltilde_L, G, EXX_cell, i, i);
+        Gamii_epsilon = compute_Gamij_svd2(Ltilde_epsilon, G, EXX_cell, i, i);
+        Gamii_L = compute_Gamij_svd2(Ltilde_L, G, EXX_cell, i, i);
         Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx)  = Gamii_epsilon;
         Gamma_L(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Gamii_L;
     end
@@ -157,6 +162,43 @@ function Gamij = compute_Gamij_scaled_iden(Ltilde, G, M, dx, i, j)
 
     Gamij = (K1_ij+K2_ij+K3_ij+K4_ij)*eye(dx);
 
+end
+
+function Gamij = compute_Gamij_svd2(Ltilde, G, EXX_cell, i, j)
+    sgi = logical(sparse(G(:, i)));
+    sgj = logical(sparse(G(j, :)));
+    % All mu_xxx are logical.
+    % mu. depend on i,j. n x n 0-1 sparse matrix.
+    Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
+    % lambda in the note. depend on i,j. n x n
+    Lamb_ij = Ltilde(sgi, sgj) - bsxfun(@plus, Ltilde(sgi, j), Ltilde(i, sgj))+ Ltilde(i, j);
+
+    % K1 
+    % dx x dx x #1's in Mu_ij
+    K1_blocks = cat(3, EXX_cell{Mu_ij}); 
+    K1_ij = mat3d_times_vec(K1_blocks, Lamb_ij(:));
+
+    % K2
+    % sparse nxn
+    W_ij = Lamb_ij;
+    Mu_p = logical(sum(Mu_ij, 2));
+    % dx x dx x #1's in Mu_p
+    K2_blocks = cat(3, EXX_cell{Mu_p, j});
+    W_p = sum(W_ij, 2);
+    K2_ij = -mat3d_times_vec(K2_blocks, W_p);
+
+    % K3. This has a similar structure as K2.
+    Mu_q = logical(sum(Mu_ij, 1));
+    % dx x dx x #1's in Mu_q
+    K3_blocks = cat(3, EXX_cell{i, Mu_q});
+    W_q = sum(W_ij, 1);
+    K3_ij = -mat3d_times_vec(K3_blocks, W_q);
+
+    % T4
+    EXX_ij = EXX_cell{i, j};
+    K4_ij = sum(W_p)*EXX_ij;
+
+    Gamij = K1_ij+K2_ij+K3_ij+K4_ij;
 end
 
 function Gamij = compute_Gamij_svd(Ltilde, G, EXX_cell, i, j)

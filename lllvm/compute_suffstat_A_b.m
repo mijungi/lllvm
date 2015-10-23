@@ -78,7 +78,7 @@ ECTC_cell = mat2cell(ECTC, dx*ones(1, n), dx*ones(1, n));
 %     j_nonzero_idx =  j_nonzero_idx(logical(j_nonzero_idx>i));
 %     for jj=1:length(j_nonzero_idx)
 %         j = j_nonzero_idx(jj); 
-%         Aij = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, j);
+%         Aij = compute_Aij_wittawat2(Ltilde, G, ECTC_cell, gamma, i, j);
 %         A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
 %     end
 % end
@@ -102,7 +102,7 @@ if use_scaled_identity_check && are_subblocks_scaled_identity(ECTC_cell)
 
             % check with the full version
             %if true 
-            %  Aij_full = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma,  i, j);
+            %  Aij_full = compute_Aij_wittawat2(Ltilde, G, ECTC_cell, gamma,  i, j);
             %  display(sprintf('|Aij - Aij_full|_fro = %.5g',  norm(Aij - Aij_full) ));
             %end
         end
@@ -119,14 +119,16 @@ else
     % subblocks of ECTC_cell are not scaled identity.
     for i=1:n
         for j=i+1:n
-            Aij = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, j);
+            Aij = compute_Aij_wittawat2(Ltilde, G, ECTC_cell, gamma, i, j);
+            %display(sprintf('|Aij - Aij2| = %.6f', norm(Aij-Aij2)));
+
             A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
         end
     end
     A = A + A';
     % compute the diagonal
     for i=1:n
-        Aii = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, i);
+        Aii = compute_Aij_wittawat2(Ltilde, G, ECTC_cell, gamma, i, i);
         A(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Aii;
     end
 end
@@ -168,6 +170,45 @@ function Aij = compute_Aij_scaled_iden(Ltilde, G, CCscale, gamma, dx, i, j)
 
     Aij = gamma^2*(T1_ij+T2_ij+T3_ij+T4_ij)*eye(dx);
 
+end
+
+function Aij = compute_Aij_wittawat2(Ltilde, G, ECTC_cell, gamma, i, j)
+    sgi = logical(sparse(G(:, i)));
+    sgj = logical(sparse(G(j, :)));
+    %%
+    % mu. depend on i,j. n x n 0-1 sparse matrix.
+    % All mu_xxx are logical.
+    Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
+
+    % lambda in the note. depend on i,j. n x n
+    Lamb_ij = Ltilde(sgi, sgj) - bsxfun(@plus, Ltilde(sgi, j), Ltilde(i, sgj)) + Ltilde(i, j);
+
+    % T1 
+    % dx x dx x #1's in Mu_ij
+    T1_blocks = cat(3, ECTC_cell{Mu_ij}); 
+    T1_ij = mat3d_times_vec(T1_blocks, Lamb_ij(:));
+
+    % T2
+    % sparse nxn
+    W_ij = Lamb_ij;
+    Mu_p = logical(sum(Mu_ij, 2));
+    % dx x dx x #1's in Mu_p
+    T2_blocks = cat(3, ECTC_cell{Mu_p, j});
+    W_p = sum(W_ij, 2);
+    T2_ij = mat3d_times_vec(T2_blocks, W_p);
+
+    % T3. This has a similar structure as T2.
+    Mu_q = logical(sum(Mu_ij, 1));
+    % dx x dx x #1's in Mu_q
+    T3_blocks = cat(3, ECTC_cell{i, Mu_q});
+    W_q = sum(W_ij, 1);
+    T3_ij = mat3d_times_vec(T3_blocks, W_q);
+
+    % T4
+    ECTC_ij = ECTC_cell{i, j};
+    T4_ij = sum(W_p)*ECTC_ij;
+
+    Aij = gamma^2*(T1_ij+T2_ij+T3_ij+T4_ij);
 end
 
 function Aij = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, j)
