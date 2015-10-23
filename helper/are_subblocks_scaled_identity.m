@@ -7,10 +7,10 @@ function [ is_scaled_identity ] = are_subblocks_scaled_identity(C)
 
     % A threshold on the mean absolute value of the off-diagonal entries. 
     % If it is higher than the threshold, return false. 
-    mean_abs_offdiag_thresh = 1e-5;
+    mean_abs_offdiag_thresh = 1e-3;
     % A threshold on the standard deviation of the diagonal entries. 
     % It if is higher than the threshold, return false.
-    std_diag_thresh = 1e-5;
+    std_diag_thresh = 1e-3;
     % check 50 blocks
     ncheck = min(51, size(C, 1)) - 1;
 
@@ -33,7 +33,7 @@ function [ is_scaled_identity ] = are_subblocks_scaled_identity(C)
         % mean. abs. of off-diagonal entries is too large.
         % Say no.
         is_scaled_identity = false;
-    elseif any(std(diagMat, 0, 1) > std_diag_thresh )
+    elseif mean(std(diagMat, 0, 1)) > std_diag_thresh 
         % std of the diagonal entries of each block is too large. Say no.
         is_scaled_identity = false;
     else 

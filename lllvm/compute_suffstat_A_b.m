@@ -68,20 +68,6 @@ ECTC = dy*cov_c + mean_c' * mean_c;
 % an nxn cell array. Each element is a dx x dx matrix.
 ECTC_cell = mat2cell(ECTC, dx*ones(1, n), dx*ones(1, n));
 
-% compute the upper part. 
-
-A = zeros(n*dx, n*dx);
-% tic; 
-for i=1:n
-    for j=i+1:n
-        Aij = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, j);
-        A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
-    end
-end
-% toc;
-
-A = A + A';
-
 
 %%
 % A = zeros(n*dx, n*dx);
@@ -100,15 +86,89 @@ A = A + A';
 
 %%
 % toc;
+% compute the upper part. 
+use_scaled_identity_check = true;
+%use_scaled_identity_check = false;
+A = zeros(n*dx, n*dx);
+if use_scaled_identity_check && are_subblocks_scaled_identity(ECTC_cell)
+    % This subblocks of ECTC_cell will become scaled identity after a few 
+    % steps of EM. This if part is to make the computation faster.
+    % One can always use the else part for everything (just slow).
+    CCscale = cell2diagmeans(ECTC_cell);
+    for i=1:n
+        for j=i+1:n
+            Aij = compute_Aij_scaled_iden(Ltilde, G, CCscale, gamma, dx, i, j);
+            A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
 
-% norm(A-B)
-% compute the diagonal
-for i=1:n
-    Aii = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, i);
-    A(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Aii;
+            % check with the full version
+            %if true 
+            %  Aij_full = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma,  i, j);
+            %  display(sprintf('|Aij - Aij_full|_fro = %.5g',  norm(Aij - Aij_full) ));
+            %end
+        end
+    end
+    A = A + A';
+    % compute the diagonal
+    for i=1:n
+        Aii = compute_Aij_scaled_iden(Ltilde, G, CCscale, gamma, dx, i, i);
+        A(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Aii;
+    end
+
+else
+
+    % subblocks of ECTC_cell are not scaled identity.
+    for i=1:n
+        for j=i+1:n
+            Aij = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, j);
+            A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
+        end
+    end
+    A = A + A';
+    % compute the diagonal
+    for i=1:n
+        Aii = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, i);
+        A(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Aii;
+    end
 end
 
 end %end compute_A_wittawat(..)
+
+function Aij = compute_Aij_scaled_iden(Ltilde, G, CCscale, gamma, dx, i, j)
+% This function assumes that each block in ECTC_cell is a scaled identity matrix.
+% This will happen at the latter stage of EM. The scales multipled to the identity 
+% matrices are collected in CCscale
+%
+% - Ltilde: n x n 
+% - G: graph n x n
+% - CCscale: n x n matrix. Assume that ECTC_cell{i, j} = a_ij*I (scaled identity). 
+%    Then CCscale(i, j) = a_ij. 
+%
+
+    % mu. depend on i,j. n x n 0-1 sparse matrix.
+    % All mu_xxx are logical.
+    sgi = logical(sparse(G(:, i)));
+    sgj = logical(sparse(G(j, :)));
+    Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
+    % lambda in the note. depend on i,j. #neighbours of i x #neighbours of j
+    Lamb_ij = Ltilde(sgi, sgj) - bsxfun(@plus, Ltilde(sgi, j), Ltilde(i, sgj)) + Ltilde(i, j);
+
+    % K1 
+    T1_ij = CCscale(Mu_ij)'*Lamb_ij(:);
+
+    % K2
+    W_p = sum(Lamb_ij, 2);
+    T2_ij = CCscale(sgi, j)'*W_p;
+
+    % K3. This has a similar structure as K2.
+    W_q = sum(Lamb_ij, 1);
+    T3_ij = CCscale(i, sgj)*W_q';
+
+    % T4
+    T4_ij = sum(W_p)*CCscale(i, j);
+
+    Aij = gamma^2*(T1_ij+T2_ij+T3_ij+T4_ij)*eye(dx);
+
+end
 
 function Aij = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, j)
     % lambda in the note. depend on i,j. n x n
