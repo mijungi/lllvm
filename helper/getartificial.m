@@ -6,8 +6,8 @@ function [N, n, Y, G, dmat, col, X] = getartificial(N_in, data_flag, nbr_flag)
 %                     1 : 3D Gaussian
 %                     2 : Punctured Sphere by Saul & Roweis
 %                     3 : Swiss Roll
-%                     4 : Twin Peaks by Saul & Roweis
-%                     5 : Cornered Plane
+%                     4 : Twin Peaks by Saul & Roweis (WJ: broken)
+%                     5 : Cornered Plane (WJ: broken)
 % 'opts'        : [latent dim, neighborhood selection method flag]
 %                 [m         , nbr_flag                          ]
 % 'nbr_flag'    : As follows

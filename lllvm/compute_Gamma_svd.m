@@ -34,19 +34,6 @@ EXX_cell = mat2cell(EXX, dx*ones(1, n), dx*ones(1, n));
 Gamma_epsilon = zeros(n*dx, n*dx); 
 Gamma_L = zeros(n*dx, n*dx); 
 
-% remember: Gamma = gamma^2*Gamma_epsilon + gamma/2*Gamma_epsilon
-%%
-% tic; 
-for i=1:n
-    for j=i+1:n
-        Gamij_epsilon = compute_Gamij_svd(Ltilde_epsilon, G, EXX_cell, i, j);
-        Gamij_L = compute_Gamij_svd(Ltilde_L, G, EXX_cell, i, j);
-        Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_epsilon;
-        Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
-    end
-end
-Gamma_epsilon = Gamma_epsilon + Gamma_epsilon';
-Gamma_L = Gamma_L + Gamma_L';
 % toc; 
 
 %%
@@ -65,23 +52,112 @@ Gamma_L = Gamma_L + Gamma_L';
 % Gamma_epsilon = Gamma_epsilon + Gamma_epsilon';
 % Gamma_L = Gamma_L + Gamma_L';
 % toc; 
-
+% remember: Gamma = gamma^2*Gamma_epsilon + gamma/2*Gamma_epsilon
 %%
-% clear j
+%
+% tic; 
+use_scaled_identity_check = true;
+%use_scaled_identity_check = false;
+if use_scaled_identity_check && are_subblocks_scaled_identity(EXX_cell)
+    % This subblocks of EXX_cell will become scaled identity after a few 
+    % steps of EM. This if part is to make the computation faster.
+    % One can always use the else part for everything (just slow).
+    M = cell2diagmeans(EXX_cell);
+    for i=1:n
+        for j=i+1:n 
+            Gamij_epsilon = compute_Gamij_scaled_iden(Ltilde_epsilon, G, M, dx, i, j);
+            Gamij_L = compute_Gamij_scaled_iden(Ltilde_L, G, M, dx, i, j);
+            Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_epsilon;
+            Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
 
-% compute the diagonal
-for i=1:n
-    Gamii_epsilon = compute_Gamij_svd(Ltilde_epsilon, G, EXX_cell, i, i);
-    Gamii_L = compute_Gamij_svd(Ltilde_L, G, EXX_cell, i, i);
-    Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx)  = Gamii_epsilon;
-    Gamma_L(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Gamii_L;
-%     Gamma(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) =  gamma^2*Gamii_epsilon + gamma/2*Gamii_L;
+            % check with the full version
+            %if true 
+            %    Gamij_epsilon_full = compute_Gamij_svd(Ltilde_epsilon, G, EXX_cell, i, j);
+            %    Gamij_L_full = compute_Gamij_svd(Ltilde_L, G, EXX_cell, i, j);
+            %    display(sprintf('|Gamij_ep - Gamij_ep_full|_fro = %.5g', ...
+            %        norm(Gamij_epsilon-Gamij_epsilon_full) ));
+            %    display(sprintf('|Gamij_L - Gamij_L_full|_fro = %.5g', ...
+            %        norm(Gamij_L-Gamij_L_full) ));
+            %end
+        end
+    end
+    Gamma_epsilon = Gamma_epsilon + Gamma_epsilon';
+    Gamma_L = Gamma_L + Gamma_L';
+    clear j
+    % compute the diagonal
+    for i=1:n
+        Gamii_epsilon = compute_Gamij_scaled_iden(Ltilde_epsilon, G, M, dx, i, i);
+        Gamii_L = compute_Gamij_scaled_iden(Ltilde_L, G, M, dx, i, i);
+        Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx)  = Gamii_epsilon;
+        Gamma_L(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Gamii_L;
+    end
+
+else
+    % Subblocks of EXX_cell are not scaled identity.
+
+    for i=1:n
+        for j=i+1:n
+            Gamij_epsilon = compute_Gamij_svd(Ltilde_epsilon, G, EXX_cell, i, j);
+            Gamij_L = compute_Gamij_svd(Ltilde_L, G, EXX_cell, i, j);
+            Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_epsilon;
+            Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
+        end
+    end
+    Gamma_epsilon = Gamma_epsilon + Gamma_epsilon';
+    Gamma_L = Gamma_L + Gamma_L';
+    clear j
+    % compute the diagonal
+    for i=1:n
+        Gamii_epsilon = compute_Gamij_svd(Ltilde_epsilon, G, EXX_cell, i, i);
+        Gamii_L = compute_Gamij_svd(Ltilde_L, G, EXX_cell, i, i);
+        Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx)  = Gamii_epsilon;
+        Gamma_L(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Gamii_L;
+    end
 end
 
 Gamma = gamma^2*Gamma_epsilon + gamma/2*Gamma_L;
-
-
 end% end compute_Gamma_wittawat
+
+
+
+function Gamij = compute_Gamij_scaled_iden(Ltilde, G, M, dx, i, j)
+% This function assumes that each block in EXX_cell is a scaled identity matrix.
+% This will happen at the latter stage of EM. The scales multipled to the identity 
+% matrices are collected in M.
+%
+% - Ltilde: n x n 
+% - G: graph n x n
+% - M: n x n matrix. Assume that EXX_cell{i, j} = a_ij*I (scaled identity). 
+%    Then EXX_scale(i, j) = a_ij. M is such that M_ij = a_ij.
+%
+%TODO: WJ: Parallelize over i, j. Should be possible.
+%
+
+    % mu. depend on i,j. n x n 0-1 sparse matrix.
+    % All mu_xxx are logical.
+    sgi = logical(sparse(G(:, i)));
+    sgj = logical(sparse(G(j, :)));
+    Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
+    % lambda in the note. depend on i,j. #neighbours of i x #neighbours of j
+    Lamb_ij = Ltilde(sgi, sgj) - bsxfun(@plus, Ltilde(sgi, j), Ltilde(i, sgj)) + Ltilde(i, j);
+
+    % K1 
+    K1_ij = M(Mu_ij)'*Lamb_ij(:);
+
+    % K2
+    W_p = sum(Lamb_ij, 2);
+    K2_ij = -M(sgi, j)'*W_p;
+
+    % K3. This has a similar structure as K2.
+    W_q = sum(Lamb_ij, 1);
+    K3_ij = -M(i, sgj)*W_q';
+
+    % T4
+    K4_ij = sum(W_p)*M(i, j);
+
+    Gamij = (K1_ij+K2_ij+K3_ij+K4_ij)*eye(dx);
+
+end
 
 function Gamij = compute_Gamij_svd(Ltilde, G, EXX_cell, i, j)
     % lambda in the note. depend on i,j. n x n
