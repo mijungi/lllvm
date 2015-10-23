@@ -35,7 +35,8 @@ Gamma_epsilon = zeros(n*dx, n*dx);
 Gamma_L = zeros(n*dx, n*dx); 
 
 % remember: Gamma = gamma^2*Gamma_epsilon + gamma/2*Gamma_epsilon
-
+%%
+% tic; 
 for i=1:n
     for j=i+1:n
         Gamij_epsilon = compute_Gamij_svd(Ltilde_epsilon, G, EXX_cell, i, j);
@@ -46,26 +47,24 @@ for i=1:n
 end
 Gamma_epsilon = Gamma_epsilon + Gamma_epsilon';
 Gamma_L = Gamma_L + Gamma_L';
+% toc; 
 
-% Gamma = Gamma + Gamma'; 
-
-% toc;
-
-% tic;
-% Gamma = zeros(n*dx, n*dx); 
+%%
+% tic; 
 % for i=1:n
-% 
 %     j_nonzero_idx = find(G(i,:));
 %     j_nonzero_idx =  j_nonzero_idx(logical(j_nonzero_idx>i));
 %     for jj=1:length(j_nonzero_idx)
-%         j = j_nonzero_idx(jj); 
-%         Gamij = compute_Gamij_wittawat(Ltilde, G, EXX_cell, gamma, i, j);
-%         Gamma(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij;
+%         j = j_nonzero_idx(jj);
+%         Gamij_epsilon = compute_Gamij_svd(Ltilde_epsilon, G, EXX_cell, i, j);
+%         Gamij_L = compute_Gamij_svd(Ltilde_L, G, EXX_cell, i, j);
+%         Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_epsilon;
+%         Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
 %     end
 % end
-% Gamma = Gamma + Gamma'; 
-
-% toc;
+% Gamma_epsilon = Gamma_epsilon + Gamma_epsilon';
+% Gamma_L = Gamma_L + Gamma_L';
+% toc; 
 
 %%
 % clear j
