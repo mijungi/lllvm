@@ -5,23 +5,23 @@
 clear;
 clc;
 
-n = 200; % total number of datapoints
+n = 400; % total number of datapoints
 
 % select data flag
 data_flag = 1; % 3D Gaussian
-k = 20;
+k = 15;
 
 % data_flag = 3; % swiss roll
-%k = 6;
+% k = 5;
 
 % maximum number of EM iterations to perform
-max_em_iter = 100;
+max_em_iter = 10;
 
 % true/false to store result. If true, record all variables updated in every
 % EM iteration.
 is_results_stored = true;
 
-maxseed = 10;
+maxseed = 1;
 seedpool = 1:maxseed;
 
 for seednum = 1:maxseed
@@ -110,7 +110,8 @@ for seednum = 1:maxseed
     
     opt_dec = 1; % using decomposition
     [Ltilde] = compute_Ltilde(L, epsilon, gamma_new, opt_dec);
-    eigv_L = eig(L);
+    eigv_L = Ltilde.eigL;
+%     eigv_L = eig(L);
     
     % check if they match
     %     norm( inv(epsilon*ones(n,1)*ones(1,n) + 2*gamma*L)-Ltilde.Ltilde)
@@ -135,6 +136,14 @@ for seednum = 1:maxseed
         mean_c = gamma_new*H*cov_c';
         display(sprintf('E step : q(C) took %3f', toc(tStart)));
         
+%         ECTC = dy*cov_c + mean_c' * mean_c; 
+%         EXX = cov_x + mean_x * mean_x';
+%         
+%         subplot(221); imagesc(ECTC);
+%         subplot(222); imagesc(EXX);
+%         
+%         pause; 
+        
         %% (2) M step: we don't update hyperparameters. Just compute lower bound with new mean/cov of x and C
         
 %         tStart = tic;
@@ -158,9 +167,6 @@ for seednum = 1:maxseed
         variational_lwb(i_em) = lwb_likelihood + lwb_C + lwb_x; % eq.(21)+(22)+(23)
         display(sprintf('EM it. %d/%d. lwb = %.3f', i_em, max_em_iter, variational_lwb(i_em)));
         
-        %     figure(102);
-        %     plot(1:i_em, variational_lwb(1:i_em), 'o-');
-        
         % store results (all updated variables)
         if is_results_stored
             
@@ -178,6 +184,20 @@ for seednum = 1:maxseed
             
         end
         
+        
+        figure(1);
+        subplot(211); plot(1:i_em, variational_lwb(1:i_em), 'o-');
+        reshaped_mean_x = reshape(meanXmat(:,i_em), dx, []);
+        subplot(212); scatter(reshaped_mean_x(1,:), reshaped_mean_x(2,:), 20, col, 'o', 'filled');
+
+        figure(2);
+        plotlearning(dx,dy,n,reshape(meanCmat(:,i_em),dy,n*dx),Y);
+        
+%         figure(3);
+%         subplot(211); scatter(truex(1,:), truex(2,:), 20, col, 'o', 'filled');
+%         reshaped_mean_x = reshape(meanXmat(:,i_em), dx, []);
+%         subplot(212); scatter(reshaped_mean_x(1,:), reshaped_mean_x(2,:), 20, col, 'o', 'filled'); 
+        
         i_em = i_em + 1;
         
     end
@@ -187,7 +207,7 @@ for seednum = 1:maxseed
     display(sprintf('# decreasing lwb pts  : %.3f', lwb_detector));
     
     % saving results 
-    save(strcat('dataflag ', num2str(data_flag), 'seednum ', num2str(seednum), '.mat'), 'variational_lwb', 'meanCmat', 'meanXmat', 'alphamat', 'gammamat', 'Y', 'G', 'col', 'truex', 'lwb_detector');
+    save(strcat('dataflag ', num2str(data_flag), 'seednum ', num2str(seednum), 'k ', num2str(k), '.mat'), 'variational_lwb', 'meanCmat', 'meanXmat', 'alphamat', 'gammamat', 'Y', 'G', 'col', 'truex', 'lwb_detector');
     
     % change seed back
     rng(oldRng);
@@ -197,15 +217,25 @@ end
 % save lwb_detector_alpha_beta lwb_detector_alpha_beta
 
 %%
-
-figure(1);
-which = 1;
-plotlearning(dx,dy,n,reshape(meanCmat(:,which),dy,n*dx),Y);
-
-figure(3);
-subplot(211); scatter(truex(1,:), truex(2,:), 20, col, 'o', 'filled');
-reshaped_mean_x = reshape(meanXmat(:,which), dx, []);
-subplot(212); scatter(reshaped_mean_x(1,:), reshaped_mean_x(2,:), 20, col, 'o', 'filled');
+% 
+% load dataflag1seednum1.mat
+% % % load dataflag3seednum1.mat
+% % 
+% dy = 3;
+% dx = 2; 
+% n = size(G,1);
+% % 
+% % figure(1);
+% % plot(variational_lwb)
+% % 
+% figure(2);
+% which = 3;
+% plotlearning(dx,dy,n,reshape(meanCmat(:,which),dy,n*dx),Y);
+% 
+% figure(3);
+% subplot(211); scatter(truex(1,:), truex(2,:), 20, col, 'o', 'filled');
+% reshaped_mean_x = reshape(meanXmat(:,which), dx, []);
+% subplot(212); scatter(reshaped_mean_x(1,:), reshaped_mean_x(2,:), 20, col, 'o', 'filled');
 
 
 % subplot(212);
