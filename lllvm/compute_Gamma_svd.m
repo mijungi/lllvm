@@ -145,6 +145,10 @@ function Gamij = compute_Gamij_scaled_iden(Ltilde, G, M, dx, i, j)
     Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
     % lambda in the note. depend on i,j. #neighbours of i x #neighbours of j
     Lamb_ij = Ltilde(sgi, sgj) - bsxfun(@plus, Ltilde(sgi, j), Ltilde(i, sgj)) + Ltilde(i, j);
+    if all(abs(Lamb_ij) <= 1e-6)
+        Gamij = zeros(dx, dx);
+        return;
+    end
 
     % K1 
     K1_ij = M(Mu_ij)'*Lamb_ij(:);
@@ -172,6 +176,11 @@ function Gamij = compute_Gamij_svd2(Ltilde, G, EXX_cell, i, j)
     Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
     % lambda in the note. depend on i,j. n x n
     Lamb_ij = Ltilde(sgi, sgj) - bsxfun(@plus, Ltilde(sgi, j), Ltilde(i, sgj))+ Ltilde(i, j);
+    if all(abs(Lamb_ij) <= 1e-6)
+        dx = size(EXX_cell{1, 1}, 1);
+        Gamij = zeros(dx, dx);
+        return;
+    end
 
     % K1 
     % dx x dx x #1's in Mu_ij
