@@ -23,6 +23,16 @@ opt.TolX = 1e-4;
 %     - 0.5*alpha*tr_cov_x - 0.5*trace(invOmega*cov_x) + 0.5*ndx ...
 %     - 0.5*alpha*mean_x2 - 0.5*invOmegaQuad;
 
-lwb_x  = 0.5*logdetns(cov_x) + 0.5*dx*sum(log(alpha + 2*eigv_L))   ...
+%  try
+logdettrm =  logdetns(cov_x); 
+%  catch
+%      [u,d,v] = svd(cov_x);
+%      diagd = diag(d);
+%      threshold = 1e-6;
+%      d_above_threshold = diagd(diagd>threshold);
+%      logdettrm =  sum(log(d_above_threshold));
+%  end
+
+lwb_x  = 0.5*logdettrm + 0.5*dx*sum(log(alpha + 2*eigv_L))   ...
     - 0.5*alpha*tr_cov_x - 0.5*trace(invOmega*cov_x) + 0.5*ndx ...
     - 0.5*alpha*mean_x2 - 0.5*invOmegaQuad;

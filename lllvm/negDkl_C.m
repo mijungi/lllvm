@@ -18,5 +18,19 @@ ndx = size(cov_c,1);
 epJJinvOmega = epsilon*J*J' + invOmega;
 covCepJJinvOmega  = cov_c*epJJinvOmega;
 
-lwb_C = 0.5*dy*logdetns(covCepJJinvOmega) - 0.5*dy*trace(covCepJJinvOmega) + ...
+logdetepJJ = logdetns(epJJinvOmega);
+
+%  try
+logdetcovc =  logdetns(cov_c) ;
+%  catch
+%      [u,d,v] = svd(cov_c);
+%      diagd = diag(d);
+%      threshold = 1e-6;
+%      d_above_threshold = diagd(diagd>threshold);
+%      logdetcovc =  sum(log(d_above_threshold)) ;
+%  end
+ 
+ logdettrm = logdetepJJ + logdetcovc;
+
+lwb_C = 0.5*dy*logdettrm - 0.5*dy*trace(covCepJJinvOmega) + ...
     0.5*ndx*dy - 0.5*trace(epJJinvOmega*mean_c'*mean_c); 
