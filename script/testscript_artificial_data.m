@@ -8,7 +8,7 @@ n = 400; % total number of datapoints
 
 % select data flag
 data_flag = 1; % 3D Gaussian
-k = 20;
+k = 10;
 
 % data_flag = 3; % swiss roll
 % k = 10;
@@ -23,7 +23,7 @@ is_results_stored = true;
 maxseed = 1;
 seedpool = 1:maxseed;
 
-for seednum = 1:maxseed
+for seednum = 1
     
     oldRng = rng();
     rng(seednum);
@@ -114,19 +114,19 @@ end
 
 %%
 
-data_flag = 1;
-seednum = 1;
-k = 20; 
-load(strcat('dataflag ', num2str(data_flag), 'seednum ', num2str(seednum), 'k ', num2str(k), '.mat'))
-
-which = 4;
-
-figure(1);
-plotlearning(dx,dy,n,reshape(results.mean_c(:,which),dy,n*dx),Yraw);
-
-figure(2);
-subplot(211); plot(results.lwbs);
-reshaped_mean_x = reshape(results.mean_x(:,which), dx, []);
-subplot(212); scatter(reshaped_mean_x(1,:), reshaped_mean_x(2,:), 20, col, 'o', 'filled');
+% data_flag = 1;
+% seednum = 1;
+% k = 20; 
+% load(strcat('dataflag ', num2str(data_flag), 'seednum ', num2str(seednum), 'k ', num2str(k), '.mat'))
+% 
+% which = 10;
+% 
+% figure(1);
+% plotlearning(dx,dy,n,reshape(results.mean_c(:,which),dy,n*dx),Yraw);
+% 
+% figure(2);
+% subplot(211); plot(results.lwbs);
+% reshaped_mean_x = reshape(results.mean_x(:,which), dx, []);
+% subplot(212); scatter(reshaped_mean_x(1,:), reshaped_mean_x(2,:), 20, col, 'o', 'filled');
 
 
