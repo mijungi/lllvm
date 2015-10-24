@@ -1,7 +1,7 @@
 %% update gamma and then compute log likelihood
 % mijung wrote on the 19th of Oct, 2015
 
-function [lwb_likelihood, gamma] = exp_log_likeli_update_gamma(mean_c, cov_c, H, y, L, epsilon, Ltilde, QhatLtilde_epsilonQhat, QhatLtilde_LQhat )
+function [lwb_likelihood, gamma] = exp_log_likeli_update_gamma(mean_c, cov_c, H, y, L, epsilon, Ltilde,  QhatLtilde_LQhat )
 
 % Input:
 % mean_c: dy x n*dx
@@ -11,7 +11,6 @@ function [lwb_likelihood, gamma] = exp_log_likeli_update_gamma(mean_c, cov_c, H,
 % L: laplacian matrix
 % epsilon: a term added to eign val
 % Ltilde.Ltilde_eigL
-% QhatLtilde_epsilonQhat : Gamma_epsilon
 % QhatLtilde_LQhat : Gamma_L
 
 % Output:
@@ -71,17 +70,16 @@ secondmoment = dy*cov_c + mean_c'*mean_c;
 % [lwb_likelihood l1+l2+l3+l4]
 
 % gamma update
-QhatLtilde_epsilonQhatsecondmoment = trace(QhatLtilde_epsilonQhat*secondmoment); 
 QhatLtilde_LQhatsecondmoment = trace(QhatLtilde_LQhat*secondmoment);
 mean_cH = trace(mean_c'*H); 
 Lyy = trace(L*y'*y);
 
-min_obj =@(a) -(-0.5*a^2*QhatLtilde_epsilonQhatsecondmoment - a/4*QhatLtilde_LQhatsecondmoment + a*mean_cH - a*Lyy + 0.5*dy*(n-1)*log(2*a));
+min_obj =@(a) -(-a/4*QhatLtilde_LQhatsecondmoment + a*mean_cH - a*Lyy + 0.5*dy*(n-1)*log(2*a));
 opt = struct();
 opt.TolX = 1e-4;
 [gamma] = fminbnd(min_obj, 1e-5, 500, opt);
 
-l1 = -0.5*gamma^2*QhatLtilde_epsilonQhatsecondmoment - gamma/4*QhatLtilde_LQhatsecondmoment;
+l1 = -gamma/4*QhatLtilde_LQhatsecondmoment;
 l2 = gamma*mean_cH;
 l3 =  -0.5*trace(epsilon*ones(n,1)*ones(1,n)*y'*y) - gamma*Lyy;
 l4 = -0.5*n*dy*log(2*pi) + 0.5*dy*sum(log(eigL(1:end-1))) + 0.5*dy*log(n*epsilon) + 0.5*dy*(n-1)*log(2*gamma); 

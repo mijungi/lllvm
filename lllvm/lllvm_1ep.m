@@ -122,14 +122,14 @@ for i_em = 1:max_em_iter
     mean_x = cov_x*b;
     
     % compute mean and cov of c given x (eq.56)
-    [Gamma, H, Gamma_epsilon, Gamma_L]  = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma_new, Ltilde);
+    [Gamma, H, Gamma_L]  = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma_new, Ltilde);
     cov_c = inv(Gamma + epsilon*J*J' + invOmega);
     mean_c = gamma_new*H*cov_c';
 
     
     %% (2) M step
     
-    [lwb_likelihood, gamma_new] = exp_log_likeli_update_gamma(mean_c, cov_c, H, Y, L, epsilon, Ltilde, Gamma_epsilon, Gamma_L);
+    [lwb_likelihood, gamma_new] = exp_log_likeli_update_gamma(mean_c, cov_c, H, Y, L, epsilon, Ltilde, Gamma_L);
     lwb_C = negDkl_C(mean_c, cov_c, invOmega, J, epsilon);
     [lwb_x, alpha_new] = negDkl_x_update_alpha(mean_x, cov_x, invOmega, eigv_L);
     

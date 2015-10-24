@@ -131,7 +131,7 @@ for seednum = 1:maxseed
         
         tStart = tic;
         % compute mean and cov of c given x (eq.56)
-        [Gamma, H, Gamma_epsilon, Gamma_L]  = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma_new, Ltilde);
+        [Gamma, H, Gamma_L]  = compute_suffstat_Gamma_h(G, mean_x, cov_x, Y, gamma_new, Ltilde);
         cov_c = inv(Gamma + epsilon*J*J' + invOmega);
         mean_c = gamma_new*H*cov_c';
         display(sprintf('E step : q(C) took %3f', toc(tStart)));
@@ -147,7 +147,7 @@ for seednum = 1:maxseed
         %% (2) M step: we don't update hyperparameters. Just compute lower bound with new mean/cov of x and C
         
 %         tStart = tic;
-        [lwb_likelihood, gamma_new] = exp_log_likeli_update_gamma(mean_c, cov_c, H, Y, L, epsilon, Ltilde, Gamma_epsilon, Gamma_L);
+        [lwb_likelihood, gamma_new] = exp_log_likeli_update_gamma(mean_c, cov_c, H, Y, L, epsilon, Ltilde,  Gamma_L);
 %         display(sprintf('M step : gamma update took %3f', toc(tStart)));
         
 %         tStart = tic;

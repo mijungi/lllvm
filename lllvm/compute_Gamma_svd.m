@@ -1,4 +1,4 @@
-function [Gamma, Gamma_epsilon, Gamma_L ] = compute_Gamma_svd(G, EXX, Y, gamma, Ltilde_epsilon, Ltilde_L )
+function [Gamma,  Gamma_L ] = compute_Gamma_svd(G, EXX, Y, gamma, Ltilde_epsilon, Ltilde_L )
 % Gamma_svd  = compute_Gamma_svd(G, mean_x, cov_x, Y, gamma, Ltilde_epsilon, Ltilde_L );
 
 % inputs
@@ -13,8 +13,7 @@ function [Gamma, Gamma_epsilon, Gamma_L ] = compute_Gamma_svd(G, EXX, Y, gamma, 
 
 % outputs
 % (1) Gamma: eq(64)
-% (2) Gamma_epsilon: first term in Gamma without gamma
-% (3) Gamma_L : second term in Gamma without gamma
+% (2) Gamma_L : second term in Gamma without gamma
 
 [dy, n] = size(Y);
 dx = size(EXX,1)/n;
@@ -31,7 +30,6 @@ EXX_cell = mat2cell(EXX, dx*ones(1, n), dx*ones(1, n));
 % computing the upper off-diagonal first 
 % tic;
 % Gamma = zeros(n*dx, n*dx); 
-Gamma_epsilon = zeros(n*dx, n*dx); 
 Gamma_L = zeros(n*dx, n*dx); 
 
 % toc; 
@@ -43,16 +41,12 @@ Gamma_L = zeros(n*dx, n*dx);
 %     j_nonzero_idx =  j_nonzero_idx(logical(j_nonzero_idx>i));
 %     for jj=1:length(j_nonzero_idx)
 %         j = j_nonzero_idx(jj);
-%         Gamij_epsilon = compute_Gamij_svd(Ltilde_epsilon, G, EXX_cell, i, j);
 %         Gamij_L = compute_Gamij_svd(Ltilde_L, G, EXX_cell, i, j);
-%         Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_epsilon;
 %         Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
 %     end
 % end
-% Gamma_epsilon = Gamma_epsilon + Gamma_epsilon';
 % Gamma_L = Gamma_L + Gamma_L';
 % toc; 
-% remember: Gamma = gamma^2*Gamma_epsilon + gamma/2*Gamma_epsilon
 %%
 %
 % tic; 
@@ -65,30 +59,22 @@ if use_scaled_identity_check && are_subblocks_scaled_identity(EXX_cell)
     M = cell2diagmeans(EXX_cell);
     for i=1:n
         for j=i+1:n 
-            Gamij_epsilon = compute_Gamij_scaled_iden(Ltilde_epsilon, G, M, dx, i, j);
             Gamij_L = compute_Gamij_scaled_iden(Ltilde_L, G, M, dx, i, j);
-            Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_epsilon;
             Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
 
             % check with the full version
             %if true 
-            %    Gamij_epsilon_full = compute_Gamij_svd2(Ltilde_epsilon, G, EXX_cell, i, j);
             %    Gamij_L_full = compute_Gamij_svd2(Ltilde_L, G, EXX_cell, i, j);
-            %    display(sprintf('|Gamij_ep - Gamij_ep_full|_fro = %.5g', ...
-            %        norm(Gamij_epsilon-Gamij_epsilon_full) ));
             %    display(sprintf('|Gamij_L - Gamij_L_full|_fro = %.5g', ...
             %        norm(Gamij_L-Gamij_L_full) ));
             %end
         end
     end
-    Gamma_epsilon = Gamma_epsilon + Gamma_epsilon';
     Gamma_L = Gamma_L + Gamma_L';
     clear j
     % compute the diagonal
     for i=1:n
-        Gamii_epsilon = compute_Gamij_scaled_iden(Ltilde_epsilon, G, M, dx, i, i);
         Gamii_L = compute_Gamij_scaled_iden(Ltilde_L, G, M, dx, i, i);
-        Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx)  = Gamii_epsilon;
         Gamma_L(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Gamii_L;
     end
 
@@ -97,30 +83,23 @@ else
 
     for i=1:n
         for j=i+1:n
-            Gamij_epsilon = compute_Gamij_svd2(Ltilde_epsilon, G, EXX_cell, i, j);
             Gamij_L = compute_Gamij_svd2(Ltilde_L, G, EXX_cell, i, j);
-            Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_epsilon;
             Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
 
-            %Gamij_epsilon2 = compute_Gamij_svd2(Ltilde_epsilon, G, EXX_cell, i, j);
             %Gamij_L2 = compute_Gamij_svd2(Ltilde_L, G, EXX_cell, i, j);
-            %display(sprintf('|Gamij_ep - Gamij_ep2| = %.6f', norm(Gamij_epsilon-Gamij_epsilon2)));
             %display(sprintf('|Gamij_L - Gamij_L2| = %.6f', norm(Gamij_L-Gamij_L2)));
         end
     end
-    Gamma_epsilon = Gamma_epsilon + Gamma_epsilon';
     Gamma_L = Gamma_L + Gamma_L';
     clear j
     % compute the diagonal
     for i=1:n
-        Gamii_epsilon = compute_Gamij_svd2(Ltilde_epsilon, G, EXX_cell, i, i);
         Gamii_L = compute_Gamij_svd2(Ltilde_L, G, EXX_cell, i, i);
-        Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx)  = Gamii_epsilon;
         Gamma_L(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Gamii_L;
     end
 end
 
-Gamma = gamma^2*Gamma_epsilon + gamma/2*Gamma_L;
+Gamma = gamma/2*Gamma_L;
 end% end compute_Gamma_wittawat
 
 
@@ -144,10 +123,6 @@ function Gamij = compute_Gamij_scaled_iden(Ltilde, G, M, dx, i, j)
     sgj = logical(sparse(G(j, :)));
     % lambda in the note. depend on i,j. #neighbours of i x #neighbours of j
     Lamb_ij = Ltilde(sgi, sgj) - bsxfun(@plus, Ltilde(sgi, j), Ltilde(i, sgj)) + Ltilde(i, j);
-    if all(abs(Lamb_ij) <= 1e-6)
-        Gamij = zeros(dx, dx);
-        return;
-    end
     Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
 
     % K1 
