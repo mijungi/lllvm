@@ -1,0 +1,37 @@
+July 3, 2014
+Note that all estimated values in the USHCN v2.5 dataset are identified
+using the 'E' flag. As described in the previous versions of the readme.txt
+file, NCDC's intent was to use a flagging system that 
+distinguishes between estimates for values that were originally missing 
+versus those that were removed as part of the homogenization process.  
+NCDC intends to fix this issue in flag identification in the near future. 
+
+October 1, 2013
+During the shutdown of government operations, USHCN version 2.5 will 
+continue to update automatically (subject to the availability
+of input data sources), but will not be monitored by the 
+USHCN team.  We will also be unable to answer questions submitted 
+to ncdc.ushcn@noaa.gov until after government operations resume.  
+
+
+February 14, 2013
+
+An omission in the USHCN Time of Observation bias (TOB) correction process 
+prevented the seasonally varying TOB adjustments from being applied 
+to the USHCN version 2.5 "FLs.52i" temperature data.  This ommission
+began on Oct. 22, 2012.  The ommission was rectified on February 12, 2013 
+when the seasonally varying TOB adjustment resumed in the processing o
+f the FLs.52i files.
+
+Between October 22, 2012 and February 12, 2013, the Pairwise Homogeneization 
+Algorithm (PHA) continued to function and provided an annual mean 
+correction for the time of observation bias in the processing of 
+the "FLs.52i" files. 
+
+Additional details on may be found at 
+http://www.ncdc.noaa.gov/sotc/national/2013/1/supplemental/page-5 
+
+
+04 October 2012
+USHCN v2.5 data are expected to be deployed to this ftp directory
+during the week of October 8, 2012
