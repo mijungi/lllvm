@@ -146,17 +146,13 @@ function Aij = compute_Aij_scaled_iden(Ltilde, G, CCscale, gamma, dx, i, j)
 %    Then CCscale(i, j) = a_ij. 
 %
 
-    % mu. depend on i,j. n x n 0-1 sparse matrix.
-    % All mu_xxx are logical.
     sgi = logical(sparse(G(:, i)));
     sgj = logical(sparse(G(j, :)));
-    Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
     % lambda in the note. depend on i,j. #neighbours of i x #neighbours of j
     Lamb_ij = Ltilde(sgi, sgj) - bsxfun(@plus, Ltilde(sgi, j), Ltilde(i, sgj)) + Ltilde(i, j);
-    if all(abs(Lamb_ij) <= 1e-6)
-        Aij = zeros(dx, dx);
-        return;
-    end
+    % mu. depend on i,j. n x n 0-1 sparse matrix.
+    % All mu_xxx are logical.
+    Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
 
     % K1 
     T1_ij = CCscale(Mu_ij)'*Lamb_ij(:);
@@ -179,18 +175,13 @@ end
 function Aij = compute_Aij_wittawat2(Ltilde, G, ECTC_cell, gamma, i, j)
     sgi = logical(sparse(G(:, i)));
     sgj = logical(sparse(G(j, :)));
+
+    % lambda in the note. depend on i,j. n x n
+    Lamb_ij = Ltilde(sgi, sgj) - bsxfun(@plus, Ltilde(sgi, j), Ltilde(i, sgj)) + Ltilde(i, j);
     %%
     % mu. depend on i,j. n x n 0-1 sparse matrix.
     % All mu_xxx are logical.
     Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
-
-    % lambda in the note. depend on i,j. n x n
-    Lamb_ij = Ltilde(sgi, sgj) - bsxfun(@plus, Ltilde(sgi, j), Ltilde(i, sgj)) + Ltilde(i, j);
-    if all(abs(Lamb_ij) <= 1e-6)
-        dx = size(ECTC_cell{1, 1}, 1);
-        Aij = zeros(dx, dx);
-        return;
-    end
 
     % T1 
     % dx x dx x #1's in Mu_ij

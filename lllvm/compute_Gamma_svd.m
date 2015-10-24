@@ -102,8 +102,8 @@ else
             Gamma_epsilon(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_epsilon;
             Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
 
-            Gamij_epsilon2 = compute_Gamij_svd2(Ltilde_epsilon, G, EXX_cell, i, j);
-            Gamij_L2 = compute_Gamij_svd2(Ltilde_L, G, EXX_cell, i, j);
+            %Gamij_epsilon2 = compute_Gamij_svd2(Ltilde_epsilon, G, EXX_cell, i, j);
+            %Gamij_L2 = compute_Gamij_svd2(Ltilde_L, G, EXX_cell, i, j);
             %display(sprintf('|Gamij_ep - Gamij_ep2| = %.6f', norm(Gamij_epsilon-Gamij_epsilon2)));
             %display(sprintf('|Gamij_L - Gamij_L2| = %.6f', norm(Gamij_L-Gamij_L2)));
         end
@@ -142,13 +142,13 @@ function Gamij = compute_Gamij_scaled_iden(Ltilde, G, M, dx, i, j)
     % All mu_xxx are logical.
     sgi = logical(sparse(G(:, i)));
     sgj = logical(sparse(G(j, :)));
-    Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
     % lambda in the note. depend on i,j. #neighbours of i x #neighbours of j
     Lamb_ij = Ltilde(sgi, sgj) - bsxfun(@plus, Ltilde(sgi, j), Ltilde(i, sgj)) + Ltilde(i, j);
     if all(abs(Lamb_ij) <= 1e-6)
         Gamij = zeros(dx, dx);
         return;
     end
+    Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
 
     % K1 
     K1_ij = M(Mu_ij)'*Lamb_ij(:);
@@ -173,14 +173,14 @@ function Gamij = compute_Gamij_svd2(Ltilde, G, EXX_cell, i, j)
     sgj = logical(sparse(G(j, :)));
     % All mu_xxx are logical.
     % mu. depend on i,j. n x n 0-1 sparse matrix.
-    Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
     % lambda in the note. depend on i,j. n x n
     Lamb_ij = Ltilde(sgi, sgj) - bsxfun(@plus, Ltilde(sgi, j), Ltilde(i, sgj))+ Ltilde(i, j);
-    if all(abs(Lamb_ij) <= 1e-6)
-        dx = size(EXX_cell{1, 1}, 1);
-        Gamij = zeros(dx, dx);
-        return;
-    end
+    %if all(abs(Lamb_ij) <= 1e-6)
+    %    dx = size(EXX_cell{1, 1}, 1);
+    %    Gamij = zeros(dx, dx);
+    %    return;
+    %end
+    Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
 
     % K1 
     % dx x dx x #1's in Mu_ij
