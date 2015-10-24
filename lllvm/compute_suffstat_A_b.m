@@ -42,6 +42,7 @@ A_wi = compute_A_wittawat(G, mean_c, cov_c, Y, gamma, epsilon);
 A = A_wi;
 end
 
+
 function A = compute_A_wittawat(G, mean_c, cov_c,  Y, gamma, epsilon)
 % inputs
 % (1) G: adjacency matrix
@@ -68,8 +69,12 @@ ECTC = dy*cov_c + mean_c' * mean_c;
 % an nxn cell array. Each element is a dx x dx matrix.
 ECTC_cell = mat2cell(ECTC, dx*ones(1, n), dx*ones(1, n));
 
-% sparse logical G
-spLogG = logical(sparse(G));
+if nnz(G)/numel(G) <= 0.01
+    % sparse logical G
+    spLogG = logical(sparse(G));
+else
+    spLogG = logical(G);
+end
 
 %%
 % A = zeros(n*dx, n*dx);
@@ -97,27 +102,32 @@ if use_scaled_identity_check && are_subblocks_scaled_identity(ECTC_cell)
     % steps of EM. This if part is to make the computation faster.
     % One can always use the else part for everything (just slow).
     CCscale = cell2diagmeans(ECTC_cell);
-    for i=1:n
-        for j=i+1:n
-            Aij = compute_Aij_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx, i, j);
-            A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
+    if n <= 700
+        % The following line will take O(n^3) storage.
+        A = compute_A_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx);
+    else
+        % n is big. Use loops to avoid memory cost.
+        for i=1:n
+            for j=i+1:n
+                Aij = compute_Aij_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx, i, j);
+                A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
 
-            % check with the full version
-            %if true 
-            %  Aij_full = compute_Aij_wittawat2(Ltilde, spLogG, ECTC_cell, gamma,  i, j);
-            %  display(sprintf('|Aij - Aij_full|_fro = %.5g',  norm(Aij - Aij_full) ));
-            %end
+                % check with the full version
+                %if true 
+                %  Aij_full = compute_Aij_wittawat2(Ltilde, spLogG, ECTC_cell, gamma,  i, j);
+                %  display(sprintf('|Aij - Aij_full|_fro = %.5g',  norm(Aij - Aij_full) ));
+                %end
+            end
         end
-    end
-    A = A + A';
-    % compute the diagonal
-    for i=1:n
-        Aii = compute_Aij_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx, i, i);
-        A(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Aii;
+        A = A + A';
+        % compute the diagonal
+        for i=1:n
+            Aii = compute_Aij_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx, i, i);
+            A(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Aii;
+        end
     end
 
 else
-
     % subblocks of ECTC_cell are not scaled identity.
     for i=1:n
         for j=i+1:n
@@ -136,6 +146,44 @@ else
 end
 
 end %end compute_A_wittawat(..)
+
+function A = compute_A_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx)
+% This function assumes that each block in ECTC_cell is a scaled identity matrix.
+% This will happen at the latter stage of EM. The scales multipled to the identity 
+% matrices are collected in CCscale
+%
+% - Ltilde: n x n 
+% - spLogG: sparse logical graph n x n
+% - CCscale: n x n matrix. Assume that ECTC_cell{i, j} = a_ij*I (scaled identity). 
+%    Then CCscale(i, j) = a_ij. 
+
+    % decompose Ltilde into La'*La
+    [U, V] = eig(Ltilde);
+    La = diag(sqrt(diag(V)))*U';
+    % decompose CCscale = T'*T 
+    [UC, VC] = eig(CCscale);
+    T = diag(sqrt(diag(VC)))*UC';
+
+    n = size(La, 1);
+    % TODO: The following code requires O(n^3) storage requirement. Probably 
+    % the highest n that it can handle is n=800.
+    M = zeros(n*n, n);
+    for i=1:n
+        Gi = spLogG(i, :);
+        Lai = La(:, i);
+        Ti = T(:, i);
+
+        s1 = La(:, Gi)*T(:, Gi)';
+        s2 = -sum(Gi)*Lai*Ti';
+        s3 = -Lai*sum(T(:, Gi), 2)';
+        s4 = sum(La(:, Gi), 2)*Ti';
+
+        M(:, i) = reshape(s1+s2+s3+s4, [n*n, 1]);
+    end
+    Coeff = (gamma^2)*(M'*M);
+    A = kron(Coeff, eye(dx));
+
+end
 
 function Aij = compute_Aij_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx, i, j)
 % This function assumes that each block in ECTC_cell is a scaled identity matrix.
@@ -190,7 +238,6 @@ function Aij = compute_Aij_wittawat2(Ltilde, spLogG, ECTC_cell, gamma, i, j)
     %%
     % mu. depend on i,j. n x n 0-1 sparse matrix.
     % All mu_xxx are logical.
-    %Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
     Mu_ij = bsxfun(@and, sgi, sgj);
 
     % T1 
@@ -221,43 +268,6 @@ function Aij = compute_Aij_wittawat2(Ltilde, spLogG, ECTC_cell, gamma, i, j)
         T3_blocks = cat(3, ECTC_cell{i, Mu_q});
         T3_ij = mat3d_times_vec(T3_blocks, W_q);
     end
-
-    % T4
-    ECTC_ij = ECTC_cell{i, j};
-    T4_ij = sum(W_p)*ECTC_ij;
-
-    Aij = gamma^2*(T1_ij+T2_ij+T3_ij+T4_ij);
-end
-
-function Aij = compute_Aij_wittawat(Ltilde, G, ECTC_cell, gamma, i, j)
-    % lambda in the note. depend on i,j. n x n
-    Lamb_ij = Ltilde - bsxfun(@plus, Ltilde(:, j), Ltilde(i, :)) + Ltilde(i, j);
-
-    %%
-    % mu. depend on i,j. n x n 0-1 sparse matrix.
-    % All mu_xxx are logical.
-    Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
-
-    % T1 
-    % dx x dx x #1's in Mu_ij
-    T1_blocks = cat(3, ECTC_cell{Mu_ij}); 
-    T1_ij = mat3d_times_vec(T1_blocks, Lamb_ij(Mu_ij));
-
-    % T2
-    % sparse nxn
-    W_ij = Lamb_ij.*Mu_ij;
-    Mu_p = logical(sum(Mu_ij, 2));
-    % dx x dx x #1's in Mu_p
-    T2_blocks = cat(3, ECTC_cell{Mu_p, j});
-    W_p = sum(W_ij, 2);
-    T2_ij = mat3d_times_vec(T2_blocks, W_p(Mu_p));
-
-    % T3. This has a similar structure as T2.
-    Mu_q = logical(sum(Mu_ij, 1));
-    % dx x dx x #1's in Mu_q
-    T3_blocks = cat(3, ECTC_cell{i, Mu_q});
-    W_q = sum(W_ij, 1);
-    T3_ij = mat3d_times_vec(T3_blocks, W_q(Mu_q));
 
     % T4
     ECTC_ij = ECTC_cell{i, j};

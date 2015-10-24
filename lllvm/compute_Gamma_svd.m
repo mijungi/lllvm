@@ -30,7 +30,12 @@ EXX_cell = mat2cell(EXX, dx*ones(1, n), dx*ones(1, n));
 % computing the upper off-diagonal first 
 % tic;
 % Gamma = zeros(n*dx, n*dx); 
-spLogG = logical(sparse(G));
+if nnz(G)/numel(G) <= 0.01
+    % sparse logical G
+    spLogG = logical(sparse(G));
+else
+    spLogG = logical(G);
+end
 Gamma_L = zeros(n*dx, n*dx); 
 
 % toc; 
@@ -58,25 +63,30 @@ if use_scaled_identity_check && are_subblocks_scaled_identity(EXX_cell)
     % steps of EM. This if part is to make the computation faster.
     % One can always use the else part for everything (just slow).
     M = cell2diagmeans(EXX_cell);
-    for i=1:n
-        for j=i+1:n 
-            Gamij_L = compute_Gamij_scaled_iden(Ltilde_L, spLogG, M, dx, i, j);
-            Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
+    if n <= 700
+        Gamma_L = compute_Gam_scaled_iden(Ltilde_L, spLogG, M, dx);
+        %display(sprintf('|Gam_L - GamL_cubic| = %.6f', norm(Gamma_L-GamL_cubic, 'fro') ));
+    else
+        for i=1:n
+            for j=i+1:n 
+                Gamij_L = compute_Gamij_scaled_iden(Ltilde_L, spLogG, M, dx, i, j);
+                Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
 
-            % check with the full version
-            %if true 
-            %    Gamij_L_full = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, j);
-            %    display(sprintf('|Gamij_L - Gamij_L_full|_fro = %.5g', ...
-            %        norm(Gamij_L-Gamij_L_full) ));
-            %end
+                % check with the full version
+                %if true 
+                %    Gamij_L_full = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, j);
+                %    display(sprintf('|Gamij_L - Gamij_L_full|_fro = %.5g', ...
+                %        norm(Gamij_L-Gamij_L_full) ));
+                %end
+            end
         end
-    end
-    Gamma_L = Gamma_L + Gamma_L';
-    clear j
-    % compute the diagonal
-    for i=1:n
-        Gamii_L = compute_Gamij_scaled_iden(Ltilde_L, spLogG, M, dx, i, i);
-        Gamma_L(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Gamii_L;
+        Gamma_L = Gamma_L + Gamma_L';
+        clear j
+        % compute the diagonal
+        for i=1:n
+            Gamii_L = compute_Gamij_scaled_iden(Ltilde_L, spLogG, M, dx, i, i);
+            Gamma_L(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Gamii_L;
+        end
     end
 
 else
@@ -104,6 +114,39 @@ Gamma = gamma/2*Gamma_L;
 end% end compute_Gamma_wittawat
 
 
+function Gam = compute_Gam_scaled_iden(Ltilde, spLogG, M, dx)
+% This function assumes that each block in EXX_cell is a scaled identity matrix.
+%
+% - Ltilde: n x n 
+% - spLogG: sparse logical graph n x n
+% - M: n x n matrix. Assume that EXX_cell{i, j} = a_ij*I (scaled identity). 
+%    Then M(i, j) = a_ij. 
+
+    % decompose Ltilde into La'*La
+    [U, V] = eig(Ltilde);
+    La = diag(sqrt(diag(V)))*U';
+    % decompose CCscale = T'*T 
+    [UC, VC] = eig(M);
+    T = diag(sqrt(diag(VC)))*UC';
+
+    n = size(La, 1);
+    % TODO: The following code requires O(n^3) storage requirement. Probably 
+    % the highest n that it can handle is n=800.
+    S = zeros(n*n, n);
+    for i=1:n
+        Gi = spLogG(i, :);
+        Lai = La(:, i);
+        Ti = T(:, i);
+
+        s1 = La(:, Gi)*T(:, Gi)';
+        s2 = sum(Gi)*Lai*Ti';
+        s3 = -Lai*sum(T(:, Gi), 2)';
+        s4 = -sum(La(:, Gi), 2)*Ti';
+
+        S(:, i) = reshape(s1+s2+s3+s4, [n*n, 1]);
+    end
+    Gam = kron(S'*S, eye(dx));
+end
 
 function Gamij = compute_Gamij_scaled_iden(Ltilde, spLogG, M, dx, i, j)
 % This function assumes that each block in EXX_cell is a scaled identity matrix.
