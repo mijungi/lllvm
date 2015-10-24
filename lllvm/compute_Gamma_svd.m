@@ -30,6 +30,7 @@ EXX_cell = mat2cell(EXX, dx*ones(1, n), dx*ones(1, n));
 % computing the upper off-diagonal first 
 % tic;
 % Gamma = zeros(n*dx, n*dx); 
+spLogG = logical(sparse(G));
 Gamma_L = zeros(n*dx, n*dx); 
 
 % toc; 
@@ -59,12 +60,12 @@ if use_scaled_identity_check && are_subblocks_scaled_identity(EXX_cell)
     M = cell2diagmeans(EXX_cell);
     for i=1:n
         for j=i+1:n 
-            Gamij_L = compute_Gamij_scaled_iden(Ltilde_L, G, M, dx, i, j);
+            Gamij_L = compute_Gamij_scaled_iden(Ltilde_L, spLogG, M, dx, i, j);
             Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
 
             % check with the full version
             %if true 
-            %    Gamij_L_full = compute_Gamij_svd2(Ltilde_L, G, EXX_cell, i, j);
+            %    Gamij_L_full = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, j);
             %    display(sprintf('|Gamij_L - Gamij_L_full|_fro = %.5g', ...
             %        norm(Gamij_L-Gamij_L_full) ));
             %end
@@ -74,7 +75,7 @@ if use_scaled_identity_check && are_subblocks_scaled_identity(EXX_cell)
     clear j
     % compute the diagonal
     for i=1:n
-        Gamii_L = compute_Gamij_scaled_iden(Ltilde_L, G, M, dx, i, i);
+        Gamii_L = compute_Gamij_scaled_iden(Ltilde_L, spLogG, M, dx, i, i);
         Gamma_L(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Gamii_L;
     end
 
@@ -83,10 +84,10 @@ else
 
     for i=1:n
         for j=i+1:n
-            Gamij_L = compute_Gamij_svd2(Ltilde_L, G, EXX_cell, i, j);
+            Gamij_L = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, j);
             Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
 
-            %Gamij_L2 = compute_Gamij_svd2(Ltilde_L, G, EXX_cell, i, j);
+            %Gamij_L2 = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, j);
             %display(sprintf('|Gamij_L - Gamij_L2| = %.6f', norm(Gamij_L-Gamij_L2)));
         end
     end
@@ -94,7 +95,7 @@ else
     clear j
     % compute the diagonal
     for i=1:n
-        Gamii_L = compute_Gamij_svd2(Ltilde_L, G, EXX_cell, i, i);
+        Gamii_L = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, i);
         Gamma_L(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Gamii_L;
     end
 end
@@ -104,13 +105,13 @@ end% end compute_Gamma_wittawat
 
 
 
-function Gamij = compute_Gamij_scaled_iden(Ltilde, G, M, dx, i, j)
+function Gamij = compute_Gamij_scaled_iden(Ltilde, spLogG, M, dx, i, j)
 % This function assumes that each block in EXX_cell is a scaled identity matrix.
 % This will happen at the latter stage of EM. The scales multipled to the identity 
 % matrices are collected in M.
 %
 % - Ltilde: n x n 
-% - G: graph n x n
+% - spLogG: sparse logical graph n x n
 % - M: n x n matrix. Assume that EXX_cell{i, j} = a_ij*I (scaled identity). 
 %    Then EXX_scale(i, j) = a_ij. M is such that M_ij = a_ij.
 %
@@ -119,11 +120,12 @@ function Gamij = compute_Gamij_scaled_iden(Ltilde, G, M, dx, i, j)
 
     % mu. depend on i,j. n x n 0-1 sparse matrix.
     % All mu_xxx are logical.
-    sgi = logical(sparse(G(:, i)));
-    sgj = logical(sparse(G(j, :)));
+    sgi = spLogG(:, i);
+    sgj = spLogG(j, :);
     % lambda in the note. depend on i,j. #neighbours of i x #neighbours of j
     Lamb_ij = Ltilde(sgi, sgj) - bsxfun(@plus, Ltilde(sgi, j), Ltilde(i, sgj)) + Ltilde(i, j);
-    Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
+    %Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
+    Mu_ij = bsxfun(@and, sgi, sgj);
 
     % K1 
     K1_ij = M(Mu_ij)'*Lamb_ij(:);
@@ -143,9 +145,9 @@ function Gamij = compute_Gamij_scaled_iden(Ltilde, G, M, dx, i, j)
 
 end
 
-function Gamij = compute_Gamij_svd2(Ltilde, G, EXX_cell, i, j)
-    sgi = logical(sparse(G(:, i)));
-    sgj = logical(sparse(G(j, :)));
+function Gamij = compute_Gamij_svd2(Ltilde, spLogG, EXX_cell, i, j)
+    sgi = spLogG(:, i);
+    sgj = spLogG(j, :);
     % All mu_xxx are logical.
     % mu. depend on i,j. n x n 0-1 sparse matrix.
     % lambda in the note. depend on i,j. n x n
@@ -155,7 +157,8 @@ function Gamij = compute_Gamij_svd2(Ltilde, G, EXX_cell, i, j)
     %    Gamij = zeros(dx, dx);
     %    return;
     %end
-    Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
+    %Mu_ij = logical(sparse(G(:, i))*sparse(G(j, :)));
+    Mu_ij = bsxfun(@and, sgi, sgj);
 
     % K1 
     % dx x dx x #1's in Mu_ij
