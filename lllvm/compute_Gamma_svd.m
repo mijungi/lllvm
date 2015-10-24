@@ -132,11 +132,19 @@ function Gamij = compute_Gamij_scaled_iden(Ltilde, spLogG, M, dx, i, j)
 
     % K2
     W_p = sum(Lamb_ij, 2);
-    K2_ij = -M(sgi, j)'*W_p;
+    %if all(abs(W_p) < 1e-10)
+    %    K2_ij = zeros(dx, dx);
+    %else
+        K2_ij = -M(sgi, j)'*W_p;
+    %end
 
     % K3. This has a similar structure as K2.
     W_q = sum(Lamb_ij, 1);
-    K3_ij = -M(i, sgj)*W_q';
+    %if all(abs(W_q) < 1e-10)
+    %    K3_ij = zeros(dx, dx);
+    %else
+        K3_ij = -M(i, sgj)*W_q';
+    %end
 
     % T4
     K4_ij = sum(W_p)*M(i, j);
@@ -148,6 +156,7 @@ end
 function Gamij = compute_Gamij_svd2(Ltilde, spLogG, EXX_cell, i, j)
     sgi = spLogG(:, i);
     sgj = spLogG(j, :);
+    dx = size(EXX_cell{1, 1}, 1);
     % All mu_xxx are logical.
     % mu. depend on i,j. n x n 0-1 sparse matrix.
     % lambda in the note. depend on i,j. n x n
@@ -168,18 +177,26 @@ function Gamij = compute_Gamij_svd2(Ltilde, spLogG, EXX_cell, i, j)
     % K2
     % sparse nxn
     W_ij = Lamb_ij;
-    Mu_p = logical(sum(Mu_ij, 2));
-    % dx x dx x #1's in Mu_p
-    K2_blocks = cat(3, EXX_cell{Mu_p, j});
     W_p = sum(W_ij, 2);
-    K2_ij = -mat3d_times_vec(K2_blocks, W_p);
+    if all(abs(W_p) < 1e-10)
+        K2_ij = zeros(dx, dx);
+    else
+        Mu_p = logical(sum(Mu_ij, 2));
+        % dx x dx x #1's in Mu_p
+        K2_blocks = cat(3, EXX_cell{Mu_p, j});
+        K2_ij = -mat3d_times_vec(K2_blocks, W_p);
+    end
 
-    % K3. This has a similar structure as K2.
-    Mu_q = logical(sum(Mu_ij, 1));
-    % dx x dx x #1's in Mu_q
-    K3_blocks = cat(3, EXX_cell{i, Mu_q});
     W_q = sum(W_ij, 1);
-    K3_ij = -mat3d_times_vec(K3_blocks, W_q);
+    if all(abs(W_q) < 1e-10)
+        K3_ij = zeros(dx, dx);
+    else
+        % K3. This has a similar structure as K2.
+        Mu_q = logical(sum(Mu_ij, 1));
+        % dx x dx x #1's in Mu_q
+        K3_blocks = cat(3, EXX_cell{i, Mu_q});
+        K3_ij = -mat3d_times_vec(K3_blocks, W_q);
+    end
 
     % T4
     EXX_ij = EXX_cell{i, j};
