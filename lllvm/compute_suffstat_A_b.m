@@ -238,11 +238,11 @@ function Aij = compute_Aij_wittawat2(Ltilde, spLogG, ECTC_cell, gamma, i, j)
     %%
     % mu. depend on i,j. n x n 0-1 sparse matrix.
     % All mu_xxx are logical.
-    Mu_ij = bsxfun(@and, sgi, sgj);
+    %Mu_ij = bsxfun(@and, sgi, sgj);
 
     % T1 
     % dx x dx x #1's in Mu_ij
-    T1_blocks = cat(3, ECTC_cell{Mu_ij}); 
+    T1_blocks = cat(3, ECTC_cell{sgi, sgj}); 
     T1_ij = mat3d_times_vec(T1_blocks, Lamb_ij(:));
 
     % T2
@@ -252,9 +252,9 @@ function Aij = compute_Aij_wittawat2(Ltilde, spLogG, ECTC_cell, gamma, i, j)
     if all(abs(W_p) < 1e-10)
         T2_ij = zeros(dx, dx);
     else
-        Mu_p = logical(sum(Mu_ij, 2));
-        % dx x dx x #1's in Mu_p
-        T2_blocks = cat(3, ECTC_cell{Mu_p, j});
+        %Mu_p = logical(sum(Mu_ij, 2));
+        % dx x dx x length of sgi
+        T2_blocks = cat(3, ECTC_cell{sgi, j});
         T2_ij = mat3d_times_vec(T2_blocks, W_p);
     end
 
@@ -263,9 +263,9 @@ function Aij = compute_Aij_wittawat2(Ltilde, spLogG, ECTC_cell, gamma, i, j)
         T3_ij = zeros(dx, dx);
     else
         % T3. This has a similar structure as T2.
-        Mu_q = logical(sum(Mu_ij, 1));
-        % dx x dx x #1's in Mu_q
-        T3_blocks = cat(3, ECTC_cell{i, Mu_q});
+        %Mu_q = logical(sum(Mu_ij, 1));
+        % dx x dx x length of sgj
+        T3_blocks = cat(3, ECTC_cell{i, sgj});
         T3_ij = mat3d_times_vec(T3_blocks, W_q);
     end
 
