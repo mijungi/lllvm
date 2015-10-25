@@ -95,6 +95,7 @@ end
 % toc;
 % compute the upper part. 
 use_scaled_identity_check = true;
+n_thresh = 700;
 %use_scaled_identity_check = false;
 A = zeros(n*dx, n*dx);
 if use_scaled_identity_check && are_subblocks_scaled_identity(ECTC_cell)
@@ -102,7 +103,7 @@ if use_scaled_identity_check && are_subblocks_scaled_identity(ECTC_cell)
     % steps of EM. This if part is to make the computation faster.
     % One can always use the else part for everything (just slow).
     CCscale = cell2diagmeans(ECTC_cell);
-    if n <= 700
+    if n <= n_thresh
         % The following line will take O(n^3) storage.
         A = compute_A_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx);
     else
@@ -129,23 +130,94 @@ if use_scaled_identity_check && are_subblocks_scaled_identity(ECTC_cell)
 
 else
     % subblocks of ECTC_cell are not scaled identity.
-    for i=1:n
-        for j=i+1:n
-            Aij = compute_Aij_wittawat2(Ltilde, spLogG, ECTC_cell, gamma, i, j);
-            %display(sprintf('|Aij - Aij2| = %.6f', norm(Aij-Aij2)));
+    if n <= n_thresh
+        An3 = compute_A_n3(Ltilde, spLogG, ECTC, gamma, dx);
+        A = An3;
+    else
+        for i=1:n
+            for j=i+1:n
+                Aij = compute_Aij_wittawat2(Ltilde, spLogG, ECTC_cell, gamma, i, j);
+                %display(sprintf('|Aij - Aij2| = %.6f', norm(Aij-Aij2)));
 
-            A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
+                A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
+            end
+        end
+        clear j
+        A = A + A';
+        % compute the diagonal
+        for i=1:n
+            Aii = compute_Aij_wittawat2(Ltilde, spLogG, ECTC_cell, gamma, i, i);
+            A(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Aii;
         end
     end
-    A = A + A';
-    % compute the diagonal
-    for i=1:n
-        Aii = compute_Aij_wittawat2(Ltilde, spLogG, ECTC_cell, gamma, i, i);
-        A(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Aii;
-    end
+    %display(sprintf('|An3 - A|_fro = %.6f', norm(An3-A) ));
 end
 
 end %end compute_A_wittawat(..)
+
+function A = compute_A_n3(Ltilde, spLogG, ECTC, gamma, dx)
+% Compute <A> using O(n^3) memory. This is the fastest function but unfortunately 
+% requires large memory. 
+%
+
+    % decompose Ltilde into La'*La
+    [U, V] = eig(Ltilde);
+    La = diag(sqrt(diag(V)))*U';
+    n = size(La, 1);
+    AllCoeff = zeros(n, n, dx, dx);
+    for r=1:dx 
+        for s=1:dx
+            % n x n covariance matrix. Each element i,j is E[(C_i^\top C_j)_{r,s}]
+            % ECC_rs may not be positive definite if r != s. 
+            ECC_rs = ECTC(r:dx:end, s:dx:end);
+            % n x n
+            Coeff_rs = compute_coeff_A(La, spLogG, ECC_rs, gamma, dx);
+            AllCoeff(:, :, r, s) = Coeff_rs;
+        end
+    end
+    AllCoeff = permute(AllCoeff, [3 4 1 2]);
+    % See http://www.ee.columbia.edu/~marios/matlab/Matlab%20array%20manipulation%20tips%20and%20tricks.pdf
+    % section 6.1.1 to understand what I am doing.
+    AllCoeff = permute(AllCoeff, [1 3 2 4]);
+    A = real(reshape(AllCoeff, [dx*n, dx*n]));
+end
+
+function Coeff = compute_coeff_A(La, spLogG, CCscale, gamma, dx)
+% Much like compute_A_scaled_iden. However return the actual coefficients 
+% before taking a Kronecker product with I_dx.
+%  - La: A factor such that La'*La = Ltilde.
+%  - CCscale is square but not necessarily symmetric.
+%
+
+    % decompose CCscale = U'*V 
+    [u,s,v] = svd(CCscale);
+    U = diag(sqrt(diag(s)))*u';
+    V = diag(sqrt(diag(s)))*v';
+
+    Ubar = A_factor(La, U, spLogG);
+    Vbar = A_factor(La, V, spLogG);
+    Coeff = (gamma^2)*(Ubar'*Vbar);
+end
+
+function M = A_factor(La, U, spLogG )
+% Return a matrix M : n*size(U, 1) x n
+%
+    % TODO: The following code requires O(n^3) storage requirement.     
+    n = size(La, 1);
+    M = zeros(n*n, size(U, 1));
+    for i=1:n
+        Gi = spLogG(i, :);
+        Lai = La(:, i);
+        Ui = U(:, i);
+
+        s1 = La(:, Gi)*U(:, Gi)';
+        s2 = -sum(Gi)*Lai*Ui';
+        s3 = -Lai*sum(U(:, Gi), 2)';
+        s4 = sum(La(:, Gi), 2)*Ui';
+
+        M(:, i) = reshape(s1+s2+s3+s4, [n*size(U, 1), 1]);
+    end
+end
 
 function A = compute_A_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx)
 % This function assumes that each block in ECTC_cell is a scaled identity matrix.
@@ -160,29 +232,14 @@ function A = compute_A_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx)
     % decompose Ltilde into La'*La
     [U, V] = eig(Ltilde);
     La = diag(sqrt(diag(V)))*U';
-    % decompose CCscale = T'*T 
+    % decompose CCscale into T'*T
     [UC, VC] = eig(CCscale);
     T = diag(sqrt(diag(VC)))*UC';
 
-    n = size(La, 1);
-    % TODO: The following code requires O(n^3) storage requirement. Probably 
-    % the highest n that it can handle is n=800.
-    M = zeros(n*n, n);
-    for i=1:n
-        Gi = spLogG(i, :);
-        Lai = La(:, i);
-        Ti = T(:, i);
-
-        s1 = La(:, Gi)*T(:, Gi)';
-        s2 = -sum(Gi)*Lai*Ti';
-        s3 = -Lai*sum(T(:, Gi), 2)';
-        s4 = sum(La(:, Gi), 2)*Ti';
-
-        M(:, i) = reshape(s1+s2+s3+s4, [n*n, 1]);
-    end
+    M = A_factor(La, T, spLogG);
     Coeff = (gamma^2)*(M'*M);
+    %clear M;
     A = kron(Coeff, eye(dx));
-
 end
 
 function Aij = compute_Aij_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx, i, j)

@@ -57,13 +57,14 @@ Gamma_L = zeros(n*dx, n*dx);
 %
 % tic; 
 use_scaled_identity_check = true;
+n_thresh = 700;
 %use_scaled_identity_check = false;
 if use_scaled_identity_check && are_subblocks_scaled_identity(EXX_cell)
     % This subblocks of EXX_cell will become scaled identity after a few 
     % steps of EM. This if part is to make the computation faster.
     % One can always use the else part for everything (just slow).
     M = cell2diagmeans(EXX_cell);
-    if n <= 700
+    if n <= n_thresh
         Gamma_L = compute_Gam_scaled_iden(Ltilde_L, spLogG, M, dx);
         %display(sprintf('|Gam_L - GamL_cubic| = %.6f', norm(Gamma_L-GamL_cubic, 'fro') ));
     else
@@ -91,27 +92,98 @@ if use_scaled_identity_check && are_subblocks_scaled_identity(EXX_cell)
 
 else
     % Subblocks of EXX_cell are not scaled identity.
+    if n <= n_thresh
 
-    for i=1:n
-        for j=i+1:n
-            Gamij_L = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, j);
-            Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
+        Gam_Ln3 = compute_Gamma_n3(Ltilde_L, spLogG, EXX, dx);
+        Gamma_L = Gam_Ln3;
+    else
 
-            %Gamij_L2 = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, j);
-            %display(sprintf('|Gamij_L - Gamij_L2| = %.6f', norm(Gamij_L-Gamij_L2)));
+        for i=1:n
+            for j=i+1:n
+                Gamij_L = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, j);
+                Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
+
+                %Gamij_L2 = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, j);
+                %display(sprintf('|Gamij_L - Gamij_L2| = %.6f', norm(Gamij_L-Gamij_L2)));
+            end
+        end
+        Gamma_L = Gamma_L + Gamma_L';
+        clear j
+        % compute the diagonal
+        for i=1:n
+            Gamii_L = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, i);
+            Gamma_L(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Gamii_L;
         end
     end
-    Gamma_L = Gamma_L + Gamma_L';
-    clear j
-    % compute the diagonal
-    for i=1:n
-        Gamii_L = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, i);
-        Gamma_L(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Gamii_L;
-    end
+    %display(sprintf('|Gamma_L - Gam_Ln3|_fro = %.6f', norm(Gamma_L-Gam_Ln3) ));
+
 end
 
 Gamma = gamma/2*Gamma_L;
 end% end compute_Gamma_wittawat
+
+function Gam = compute_Gamma_n3(Ltilde, spLogG, EXX, dx)
+% Compute <Gamma> using O(n^3) memory. This is the fastest function but unfortunately 
+% requires large memory. 
+%
+    % decompose Ltilde into La'*La
+    [U, V] = eig(Ltilde);
+    La = diag(sqrt(diag(V)))*U';
+    n = size(La, 1);
+    AllCoeff = zeros(n, n, dx, dx);
+    for r=1:dx 
+        for s=1:dx
+            % n x n covariance matrix. Each element i,j is E[(x_i^\top x_j)_{r,s}]
+            % EXX_rs may not be positive definite if r != s.
+            EXX_rs = EXX(r:dx:end, s:dx:end);
+            % n x n
+            Coeff_rs = compute_coeff_Gamma(La, spLogG, EXX_rs, dx);
+            AllCoeff(:, :, r, s) = Coeff_rs;
+        end
+    end
+    AllCoeff = permute(AllCoeff, [3 4 1 2]);
+    % See http://www.ee.columbia.edu/~marios/matlab/Matlab%20array%20manipulation%20tips%20and%20tricks.pdf
+    % section 6.1.1 to understand what I am doing.
+    AllCoeff = permute(AllCoeff, [1 3 2 4]);
+    Gam = real(reshape(AllCoeff, [dx*n, dx*n]));
+end
+
+function Coeff = compute_coeff_Gamma(La, spLogG, C, dx)
+% Much like compute_Gam_scaled_iden. However return the actual coefficients 
+% before taking a Kronecker product with I_dx.
+%  - La: A factor such that La'*La = Ltilde.
+%  - C is square but not necessarily symmetric. 
+%
+
+    % decompose CCscale = U'*V 
+    [u,s,v] = svd(C);
+    U = diag(sqrt(diag(s)))*u';
+    V = diag(sqrt(diag(s)))*v';
+
+    Ubar = Gamma_factor(La, U, spLogG);
+    Vbar = Gamma_factor(La, V, spLogG);
+    Coeff = (Ubar'*Vbar);
+end
+
+function M = Gamma_factor(La, U, spLogG )
+% Return a matrix M : n*size(U, 1) x n
+
+    % TODO: The following code requires O(n^3) storage requirement. 
+    n = size(La, 1);
+    M = zeros(n*n, size(U, 1));
+    for i=1:n
+        Gi = spLogG(i, :);
+        Lai = La(:, i);
+        Ui = U(:, i);
+
+        s1 = La(:, Gi)*U(:, Gi)';
+        s2 = sum(Gi)*Lai*Ui';
+        s3 = -Lai*sum(U(:, Gi), 2)';
+        s4 = -sum(La(:, Gi), 2)*Ui';
+
+        M(:, i) = reshape(s1+s2+s3+s4, [n*size(U, 1), 1]);
+    end
+end
 
 
 function Gam = compute_Gam_scaled_iden(Ltilde, spLogG, M, dx)
@@ -125,27 +197,14 @@ function Gam = compute_Gam_scaled_iden(Ltilde, spLogG, M, dx)
     % decompose Ltilde into La'*La
     [U, V] = eig(Ltilde);
     La = diag(sqrt(diag(V)))*U';
-    % decompose CCscale = T'*T 
+    % decompose M into T'*T
     [UC, VC] = eig(M);
     T = diag(sqrt(diag(VC)))*UC';
 
-    n = size(La, 1);
-    % TODO: The following code requires O(n^3) storage requirement. Probably 
-    % the highest n that it can handle is n=800.
-    S = zeros(n*n, n);
-    for i=1:n
-        Gi = spLogG(i, :);
-        Lai = La(:, i);
-        Ti = T(:, i);
-
-        s1 = La(:, Gi)*T(:, Gi)';
-        s2 = sum(Gi)*Lai*Ti';
-        s3 = -Lai*sum(T(:, Gi), 2)';
-        s4 = -sum(La(:, Gi), 2)*Ti';
-
-        S(:, i) = reshape(s1+s2+s3+s4, [n*n, 1]);
-    end
-    Gam = kron(S'*S, eye(dx));
+    Fac = Gamma_factor(La, T, spLogG);
+    Coeff = (Fac'*Fac);
+    %clear Fac;
+    Gam = kron(Coeff, eye(dx));
 end
 
 function Gamij = compute_Gamij_scaled_iden(Ltilde, spLogG, M, dx, i, j)
