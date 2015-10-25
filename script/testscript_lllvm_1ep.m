@@ -12,7 +12,7 @@ rng(seednum);
 
 dx = 2; % dim(x)
 dy = 3; % dim(y)
-n = 50;  % number of datapoints
+n = 100;  % number of datapoints
 
 % parameters
 alpha = rand; % precision of X (zero-centering)
@@ -62,9 +62,8 @@ only_cov_diag = false;
 recorder = create_recorder_store_latent(store_every_iter, only_cov_diag);
 op.recorder = recorder;
 
-op.L = L; % laplacian matrix
-op.invOmega = kron(2*op.L,eye(dx));
-op.invPi0 = op.alpha0*eye(n*dx) + op.invOmega;
+
+invOmega = kron(2*L,eye(dx));
 
 % initial value of the posterior mean and cov of c 
 % op.cov_c = eye(dx*n) ;
@@ -74,9 +73,6 @@ J = kron(ones(n,1), eye(dx));
 op.cov_c = inv(epsilon*J*J' + invOmega);
 op.mean_c =  randn(dy, dx*n)*op.cov_c';
 
-% true/false to store result. If true, record all variables updated in every
-% EM iteration.
-op.is_results_stored = true;
 
 [results, op ] = lllvm_1ep(Y, op);
 

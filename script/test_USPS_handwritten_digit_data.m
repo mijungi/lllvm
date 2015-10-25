@@ -105,17 +105,12 @@ only_cov_diag = false;
 recorder = create_recorder_store_latent(store_every_iter, only_cov_diag);
 op.recorder = recorder;
 
-op.L = L; % laplacian matrix
-op.invOmega = kron(2*op.L,eye(dx));
-op.invPi0 = op.alpha0*eye(n*dx) + op.invOmega;
+invOmega = kron(2*L,eye(dx));
 
 % initial value of the posterior mean and cov of c
 op.cov_c = eye(dx*n) ;
 op.mean_c = randn(dy, dx*n);
 
-% true/false to store result. If true, record all variables updated in every
-% EM iteration.
-op.is_results_stored = true;
 
 [results, op ] = lllvm_1ep(Y, op);
 

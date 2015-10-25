@@ -7,8 +7,6 @@ function [results, op ] = lllvm_1ep(Y, op)
 % - op: a struct containing various options. See the code with lines containing
 %   myProcessOptions or isfield for possible options.
 %
-%created: 21 May 2015
-%
 
 % random seed. Default to 1.
 seed = myProcessOptions(op, 'seed', 1);
@@ -16,9 +14,11 @@ oldRng = rng();
 rng(seed);
 
 [dy, n] = size(Y);
+% center the data
+Y = bsxfun(@minus, Y, mean(Y, 2));
 
 % maximum number of EM iterations to perform.
-max_em_iter = myProcessOptions(op, 'max_em_iter', 500);
+max_em_iter = myProcessOptions(op, 'max_em_iter', 200);
 
 % relative tolerance of the increase of the likelihood.
 % If (like_i - like_{i-1} ) / like_{i-1}  < rel_tol, stop EM.
@@ -43,21 +43,27 @@ dx = op.dx;
 assert(dx > 0);
 %assert(dx <= dy, 'reduced dimension dx is larger than observations');
 
-L = op.L;
-invOmega = op.invOmega;
+L = diag(sum(G, 1)) - G;
+invOmega = kron(2*L, eye(dx));
 
 % Intial value of alpha. Alpha appears in precision in the prior for x (low
 % dimensional latent). This will be optimized in M steps.
 alpha0 = myProcessOptions(op, 'alpha0', 1);
 assert(alpha0 > 0, 'require alpha0 > 0');
 
+
 % invPi is Pi^-1 where p(x|G, alpha) = N(x | 0, Pi) (prior of X).
-invPi = op.invPi0;
+invPi = alpha0*eye(n*dx) + invOmega;
 
 % Initial value of gamma. V^-1 = gamma*I_dy where V is the covariance in the
 % likelihood of  the observations Y.
 gamma0 = myProcessOptions(op, 'gamma0', 1);
 assert(gamma0 > 0, 'require gamma0 > 0');
+
+% epsilon is a positive real number in the likelihood term specifying the amount 
+% to penalize deviation of the mean of the data from 0. 
+epsilon = myProcessOptions(op, 'epsilon', 1e-4);
+
 
 % A recorder is a function handle taking in a struct containing all
 % intermediate variables in LL-LVM in each EM iteration and does something.
@@ -67,23 +73,25 @@ assert(gamma0 > 0, 'require gamma0 > 0');
 % For example, a recorder may just print all the variables in every iteration.
 recorder = myProcessOptions(op, 'recorder', []);
 
+% initial value of cov_c 
+cov_c0 = myProcessOptions(op, 'cov_c0', eye(dx*n) );
+
+% initial value of mean_c
+mean_c0 = myProcessOptions(op, 'mean_c0', randn(dy, dx*n));
+
+
 % collect all options used.
 op.seed = seed;
 op.max_em_iter = max_em_iter;
 op.alpha0 = alpha0;
 op.gamma0 = gamma0;
-% op.cov_x0 = cov_x0;
-% op.mean_x0 = mean_x0;
+op.epsilon = epsilon;
 % We will not collect the recorder as it will make a saved file big.
 
-% true/false to store result. If true, record all variables updated in every
-% EM iteration.
-is_results_stored = op.is_results_stored;
 
 %========= Start EM
 gamma_new = gamma0;
 invPi_new = invPi;
-epsilon = op.epsilon;
 
 J = kron(ones(n,1), eye(dx));
 
@@ -91,21 +99,17 @@ opt_dec = 1; % using decomposition
 [Ltilde] = compute_Ltilde(L, epsilon, gamma_new, opt_dec);
 eigv_L = Ltilde.eigL;
 
-cov_c = op.cov_c;
-mean_c = op.mean_c;
+cov_c = cov_c0;
+mean_c = mean_c0;
 
 % to store results
-if is_results_stored
-    
-    meanCmat = zeros(n*dx*dy, max_em_iter);
-    meanXmat = zeros(n*dx, max_em_iter);
-    covCmat = zeros(n*dx, max_em_iter);
-    covXmat = zeros(n*dx, max_em_iter);
-    
-    alphamat = zeros(max_em_iter,1);
-    gammamat  = zeros(max_em_iter,1);
-    
-end
+meanCmat = zeros(n*dx*dy, max_em_iter);
+meanXmat = zeros(n*dx, max_em_iter);
+covCmat = zeros(n*dx, max_em_iter);
+covXmat = zeros(n*dx, max_em_iter);
+
+alphamat = zeros(max_em_iter,1);
+gammamat  = zeros(max_em_iter,1);
 
 % vars to store lower bound
 prev_lwb = inf();
@@ -126,9 +130,7 @@ for i_em = 1:max_em_iter
     cov_c = inv(Gamma + epsilon*J*J' + invOmega);
     mean_c = gamma_new*H*cov_c';
 
-    
     %% (2) M step
-    
     [lwb_likelihood, gamma_new] = exp_log_likeli_update_gamma(mean_c, cov_c, H, Y, L, epsilon, Ltilde, Gamma_L);
     lwb_C = negDkl_C(mean_c, cov_c, invOmega, J, epsilon);
     [lwb_x, alpha_new] = negDkl_x_update_alpha(mean_x, cov_x, invOmega, eigv_L);
@@ -172,17 +174,14 @@ for i_em = 1:max_em_iter
     end
     
     % store results (all updated variables)
-    if is_results_stored
-        
-        meanCmat(:,i_em) = mean_c(:);
-        meanXmat(:,i_em) = mean_x(:);
-        covCmat(:,i_em) = diag(cov_c); % store only diag of cov, due to too large size!
-        covXmat(:,i_em) = diag(cov_x); % store only diag of cov, due to too large size!
-        
-        alphamat(i_em) = alpha_new;
-        gammamat(i_em) = gamma_new;
-        
-    end
+    meanCmat(:,i_em) = mean_c(:);
+    meanXmat(:,i_em) = mean_x(:);
+    covCmat(:,i_em) = diag(cov_c); % store only diag of cov, due to too large size!
+    covXmat(:,i_em) = diag(cov_x); % store only diag of cov, due to too large size!
+
+    alphamat(i_em) = alpha_new;
+    gammamat(i_em) = gamma_new;
+
     
     % check increment of the lower bound.
     if i_em >= 2 && abs(lwb - prev_lwb) < abs_tol

@@ -69,7 +69,6 @@ op.max_em_iter = 20;
 op.abs_tol = 1e-1;
 op.G = G;
 op.dx = dx;
-op.ep_laplacian = 1e-3;
 op.alpha0 = 0.1;
 op.beta0 = 0.1;
 op.gamma0 = 0.1;
@@ -82,7 +81,7 @@ op.recorder = recorder;
 % initial value of the posterior covariance cov_x of X. Size: n*dx x n*dx.
 % Appear in q(x) = N(x | mean_x, cov_x) where x is the vectorized n*dx x 1 vector.
 %
-L = diag(sum(G, 1)) - G + op.ep_laplacian*eye(n);
+L = diag(sum(G, 1)) - G ;
 invOmega = kron(2*L, eye(dx));
 invPi = op.alpha0*eye(n*dx) + invOmega;
 op.cov_x0 = inv(eye(n*dx) + invPi) + eye(n*dx);
@@ -100,7 +99,7 @@ op.mean_x0 = op.cov_x0*randn(n*dx, 1) ;
 %op.mean_x0 = reshape(isomap_x, dx*n, 1);
 
 %% Run lllvm 
-[ results, op ] = lllvm(Y, op);
+[ results, op ] = lllvm_1ep(Y, op);
 %mean_c = results.mean_c;
 %mean_x = results.mean_x;
 
