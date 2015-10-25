@@ -252,7 +252,7 @@ function A = compute_A_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx)
     T = diag(sqrt(diag(VC)))*UC';
 
     M = A_factor(La, T, spLogG);
-    Coeff = (gamma^2)*(M'*M);
+    Coeff = real((gamma^2)*(M'*M));
     %clear M;
     A = kron(Coeff, eye(dx));
 end

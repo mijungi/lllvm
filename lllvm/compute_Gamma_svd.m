@@ -225,7 +225,7 @@ function Gam = compute_Gam_scaled_iden(Ltilde, spLogG, M, dx)
     T = diag(sqrt(diag(VC)))*UC';
 
     Fac = Gamma_factor(La, T, spLogG);
-    Coeff = (Fac'*Fac);
+    Coeff = real(Fac'*Fac);
     %clear Fac;
     Gam = kron(Coeff, eye(dx));
 end
