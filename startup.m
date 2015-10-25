@@ -7,7 +7,8 @@ fs = filesep();
 addpath(pwd);
 
 % folders to be added by genpath
-gfolders = {'helper', 'lllvm', 'script', 'thirdparty', 'real_data/ushcn_v2.5/'};
+gfolders = {'helper', 'lllvm', 'script', 'thirdparty', 'real_data/ushcn_v2.5/', ...
+    'ex'};
 for i=1:length(gfolders)
     fol = gfolders{i};
     p = [base , fs, fol];

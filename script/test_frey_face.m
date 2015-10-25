@@ -33,7 +33,6 @@ op.abs_tol = 1e-1;
 op.G = G;
 op.dx = dx;
 op.alpha0 = 1;
-op.beta0 = 1;
 op.gamma0 = 1;
 %recorder = create_recorder('print_struct');
 store_every_iter = 3;
@@ -49,10 +48,6 @@ invOmega = kron(2*L, eye(dx));
 invPi = op.alpha0*eye(n*dx) + invOmega;
 op.cov_x0 = inv(eye(n*dx) + invPi) + eye(n*dx);
 %op.cov_x0 = eye(n*dx);
-
-% initial value of the posterior mean of X. Size: n*dx x 1.
-% Appear in q(x) = N(x | mean_x, cov_x) where x is the vectorized n*dx x 1 vector.
-op.mean_x0 = op.cov_x0*randn(n*dx, 1) ;
 
 %% Run lllvm 
 [ results, op ] = lllvm_1ep(Y, op);

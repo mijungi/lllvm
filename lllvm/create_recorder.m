@@ -25,7 +25,6 @@ function rec_print_struct(state)
     toprint = struct();
     toprint.i_em = state.i_em;
     toprint.alpha = state.alpha;
-    toprint.beta = state.beta;
     toprint.gamma = state.gamma;
     disp(toprint);
 

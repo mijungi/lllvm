@@ -230,6 +230,9 @@ function fig=plot_stations_2d(sta_data, subSampleInd, lalo_pivot, dist2sizePivot
 %  northern boundary is the Canadian border. This location is at the top-left most 
 %  corner.
     n = length(sta_data.station);
+    if nargin < 4
+        dist2sizePivot = 30;
+    end
     if nargin < 3
         lalo_pivot = [48.9775; -122.7928];
     end 

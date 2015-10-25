@@ -19,7 +19,9 @@ data = load(sprintf('%s.mat', dataName));
 %    timeStamp: [2015 5 26 21 56 53.0395]
 
 % half of 1218 stations.
-subSampleInd = 1:2:size(data.Y, 2);
+%subSampleInd = 1:2:size(data.Y, 2);
+subSampleInd = randperm(size(data.Y, 2), 100);
+
 Y = data.Y(:, subSampleInd);
 [dy, n] = size(Y);
 
@@ -70,7 +72,6 @@ op.abs_tol = 1e-1;
 op.G = G;
 op.dx = dx;
 op.alpha0 = 0.1;
-op.beta0 = 0.1;
 op.gamma0 = 0.1;
 %recorder = create_recorder('print_struct');
 store_every_iter = 2;
@@ -81,15 +82,15 @@ op.recorder = recorder;
 % initial value of the posterior covariance cov_x of X. Size: n*dx x n*dx.
 % Appear in q(x) = N(x | mean_x, cov_x) where x is the vectorized n*dx x 1 vector.
 %
-L = diag(sum(G, 1)) - G ;
-invOmega = kron(2*L, eye(dx));
-invPi = op.alpha0*eye(n*dx) + invOmega;
-op.cov_x0 = inv(eye(n*dx) + invPi) + eye(n*dx);
+%L = diag(sum(G, 1)) - G ;
+%invOmega = kron(2*L, eye(dx));
+%invPi = op.alpha0*eye(n*dx) + invOmega;
+%op.cov_x0 = inv(eye(n*dx) + invPi) + eye(n*dx);
 %op.cov_x0 = 5*eye(n*dx);
 
 % initial value of the posterior mean of X. Size: n*dx x 1.
 % Appear in q(x) = N(x | mean_x, cov_x) where x is the vectorized n*dx x 1 vector.
-op.mean_x0 = op.cov_x0*randn(n*dx, 1) ;
+%op.mean_x0 = op.cov_x0*randn(n*dx, 1) ;
 %op.mean_x0 = op.cov_x0*gamrnd(0.5, 20, n*dx, 1);
 %op.mean_x0 = 10*rand(n*dx, 1) ;
 %op.mean_x0 = reshape([data.laloel(2, subSampleInd), data.laloel(1, subSampleInd)], n*dx, 1);
