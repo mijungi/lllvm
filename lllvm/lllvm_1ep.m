@@ -195,13 +195,13 @@ end %end main EM loop
 
 
 % construct the results struct
-r.cov_c = covCmat;
-r.mean_c = meanCmat;
-r.cov_x = covXmat;
-r.mean_x = meanXmat;
-r.alpha = alphamat;
-r.gamma = gammamat;
-r.lwbs = lwbs;
+r.cov_c = covCmat(:, 1:i_em);
+r.mean_c = meanCmat(:, 1:i_em);
+r.cov_x = covXmat(:, 1:i_em);
+r.mean_x = meanXmat(:, 1:i_em);
+r.alpha = alphamat(1:i_em);
+r.gamma = gammamat(1:i_em);
+r.lwbs = lwbs(1:i_em);
 results = r;
 
 rng(oldRng);
