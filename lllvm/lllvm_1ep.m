@@ -14,8 +14,9 @@ oldRng = rng();
 rng(seed);
 
 [dy, n] = size(Y);
-% center the data
-Y = bsxfun(@minus, Y, mean(Y, 2));
+% center the data and divide each dimension with its std.
+%Y = bsxfun(@minus, Y, mean(Y, 2));
+Y = normdata(Y);
 
 % maximum number of EM iterations to perform.
 max_em_iter = myProcessOptions(op, 'max_em_iter', 200);
