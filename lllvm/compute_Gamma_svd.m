@@ -133,11 +133,21 @@ function Gam = compute_Gamma_n3(Ltilde, spLogG, EXX, dx)
     AllCoeff = zeros(n, n, dx, dx);
     for r=1:dx 
         for s=1:dx
+            % TODO: We might be able to do SVD on ECTC once and pick the rows and columns 
+            % of the SVD factors instead of doing SVD for each (r,s).
+            
             % n x n covariance matrix. Each element i,j is E[(x_i^\top x_j)_{r,s}]
             % EXX_rs may not be positive definite if r != s.
             EXX_rs = EXX(r:dx:end, s:dx:end);
-            % n x n
-            Coeff_rs = compute_coeff_Gamma(La, spLogG, EXX_rs, dx);
+            if r==s
+                % decompose M into T'*T
+                [UC, VC] = eig(EXX_rs);
+                T = diag(sqrt(diag(VC)))*UC';
+                Ubar = Gamma_factor(La, T, spLogG);
+                Coeff_rs = (Ubar'*Ubar);
+            else 
+                Coeff_rs = compute_coeff_Gamma(La, spLogG, EXX_rs, dx);
+            end
             AllCoeff(:, :, r, s) = Coeff_rs;
         end
     end
@@ -170,19 +180,32 @@ function M = Gamma_factor(La, U, spLogG )
 
     % TODO: The following code requires O(n^3) storage requirement. 
     n = size(La, 1);
-    M = zeros(n*n, size(U, 1));
-    for i=1:n
-        Gi = spLogG(i, :);
-        Lai = La(:, i);
-        Ui = U(:, i);
+    nu = size(U, 1);
+    Gd = double(spLogG);
+    Degs = sum(Gd, 1);
+    LaU = reshape(MatUtils.colOuterProduct(La, U), [n*nu, n]);
+    M2 = LaU*Gd;
+    M2 = M2 +LaU*diag(Degs);
+    M2 = M2 -reshape(MatUtils.colOuterProduct(La, U*Gd), [n*nu, n]);
+    M2 = M2 -reshape(MatUtils.colOuterProduct(La*Gd, U), [n*nu, n]);
+    M = M2;
 
-        s1 = La(:, Gi)*U(:, Gi)';
-        s2 = sum(Gi)*Lai*Ui';
-        s3 = -Lai*sum(U(:, Gi), 2)';
-        s4 = -sum(La(:, Gi), 2)*Ui';
+    %n = size(La, 1);
+    %M = zeros(n*n, size(U, 1));
+    %for i=1:n
+    %  Gi = spLogG(i, :);
+    %  Lai = La(:, i);
+    %  Ui = U(:, i);
 
-        M(:, i) = reshape(s1+s2+s3+s4, [n*size(U, 1), 1]);
-    end
+    %  s1 = La(:, Gi)*U(:, Gi)';
+    %  s2 = sum(Gi)*Lai*Ui';
+    %  s3 = -Lai*sum(U(:, Gi), 2)';
+    %  s4 = -sum(La(:, Gi), 2)*Ui';
+
+    %  M(:, i) = reshape(s1+s2+s3+s4, [n*size(U, 1), 1]);
+    %end
+
+    %display(sprintf('Gamma_factor: |M-M2| = %.6f', norm(M-M2, 'fro') ));
 end
 
 

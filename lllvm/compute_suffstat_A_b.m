@@ -164,13 +164,15 @@ function A = compute_A_n3(Ltilde, spLogG, ECTC, gamma, dx)
     [U, V] = eig(Ltilde);
     La = diag(sqrt(diag(V)))*U';
     n = size(La, 1);
+
+    % TODO: We might be able to do SVD on ECTC once and pick the rows and columns 
+    % of the SVD factors instead of doing SVD for each (r,s).
     AllCoeff = zeros(n, n, dx, dx);
     for r=1:dx 
         for s=1:dx
             % n x n covariance matrix. Each element i,j is E[(C_i^\top C_j)_{r,s}]
             % ECC_rs may not be positive definite if r != s. 
             ECC_rs = ECTC(r:dx:end, s:dx:end);
-            % n x n
             Coeff_rs = compute_coeff_A(La, spLogG, ECC_rs, gamma, dx);
             AllCoeff(:, :, r, s) = Coeff_rs;
         end
@@ -181,6 +183,7 @@ function A = compute_A_n3(Ltilde, spLogG, ECTC, gamma, dx)
     AllCoeff = permute(AllCoeff, [1 3 2 4]);
     A = real(reshape(AllCoeff, [dx*n, dx*n]));
 end
+
 
 function Coeff = compute_coeff_A(La, spLogG, CCscale, gamma, dx)
 % Much like compute_A_scaled_iden. However return the actual coefficients 
@@ -204,19 +207,31 @@ function M = A_factor(La, U, spLogG )
 %
     % TODO: The following code requires O(n^3) storage requirement.     
     n = size(La, 1);
-    M = zeros(n*n, size(U, 1));
-    for i=1:n
-        Gi = spLogG(i, :);
-        Lai = La(:, i);
-        Ui = U(:, i);
+    nu = size(U, 1);
+    Gd = double(spLogG);
+    Degs = sum(Gd, 1);
+    LaU = reshape(MatUtils.colOuterProduct(La, U), [n*nu, n]);
+    M2 = LaU*Gd;
+    M2 = M2 -LaU*diag(Degs);
+    M2 = M2 -reshape(MatUtils.colOuterProduct(La, U*Gd), [n*nu, n]);
+    M2 = M2 +reshape(MatUtils.colOuterProduct(La*Gd, U), [n*nu, n]);
+    M = M2;
 
-        s1 = La(:, Gi)*U(:, Gi)';
-        s2 = -sum(Gi)*Lai*Ui';
-        s3 = -Lai*sum(U(:, Gi), 2)';
-        s4 = sum(La(:, Gi), 2)*Ui';
+    %n = size(La, 1);
+    %M = zeros(n*n, size(U, 1));
+    %for i=1:n
+    %    Gi = spLogG(i, :);
+    %    Lai = La(:, i);
+    %    Ui = U(:, i);
 
-        M(:, i) = reshape(s1+s2+s3+s4, [n*size(U, 1), 1]);
-    end
+    %    s1 = La(:, Gi)*U(:, Gi)';
+    %    s2 = -sum(Gi)*Lai*Ui';
+    %    s3 = -Lai*sum(U(:, Gi), 2)';
+    %    s4 = sum(La(:, Gi), 2)*Ui';
+
+    %    M(:, i) = reshape(s1+s2+s3+s4, [n*size(U, 1), 1]);
+    %end
+    %display(sprintf('A_factor: |M-M2| = %.6f', norm(M-M2, 'fro') ));
 end
 
 function A = compute_A_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx)
