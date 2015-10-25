@@ -73,11 +73,12 @@ epsilon = myProcessOptions(op, 'epsilon', 1e-4);
 % For example, a recorder may just print all the variables in every iteration.
 recorder = myProcessOptions(op, 'recorder', []);
 
+J = kron(ones(n,1), eye(dx));
 % initial value of cov_c 
-cov_c0 = myProcessOptions(op, 'cov_c0', eye(dx*n) );
+cov_c0 = myProcessOptions(op, 'cov_c0', inv(epsilon*(J*J') + invOmega) );
 
 % initial value of mean_c
-mean_c0 = myProcessOptions(op, 'mean_c0', randn(dy, dx*n));
+mean_c0 = myProcessOptions(op, 'mean_c0', randn(dy, dx*n)*cov_c0');
 
 
 % collect all options used.
@@ -93,7 +94,6 @@ op.epsilon = epsilon;
 gamma_new = gamma0;
 invPi_new = invPi;
 
-J = kron(ones(n,1), eye(dx));
 
 opt_dec = 1; % using decomposition
 [Ltilde] = compute_Ltilde(L, epsilon, gamma_new, opt_dec);

@@ -72,9 +72,9 @@ for seednum = 1
     
     invOmega = kron(2*L,eye(dx));
     
-    % initial value of the posterior mean and cov of c
-    op.cov_c = eye(dx*n) ;
-    op.mean_c = randn(dy, dx*n);
+    % initial value of the posterior mean and cov of c. (optional)
+    op.cov_c0 = eye(dx*n) ;
+    op.mean_c0 = randn(dy, dx*n);
 
     
     [results, op ] = lllvm_1ep(Y, op);

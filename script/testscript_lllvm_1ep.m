@@ -66,12 +66,13 @@ op.recorder = recorder;
 invOmega = kron(2*L,eye(dx));
 
 % initial value of the posterior mean and cov of c 
-% op.cov_c = eye(dx*n) ;
-% op.mean_c = randn(dy, dx*n);
+% op.cov_c0 = eye(dx*n) ;
+% op.mean_c0 = randn(dy, dx*n);
 
 J = kron(ones(n,1), eye(dx));
-op.cov_c = inv(epsilon*J*J' + invOmega);
-op.mean_c =  randn(dy, dx*n)*op.cov_c';
+% initializations optional
+op.cov_c0 = inv(epsilon*J*J' + invOmega);
+op.mean_c0 =  randn(dy, dx*n)*op.cov_c';
 
 
 [results, op ] = lllvm_1ep(Y, op);
