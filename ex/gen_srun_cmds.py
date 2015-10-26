@@ -8,7 +8,7 @@ to a slurm cluster.
 """
 
 def gen_srun_ex5():
-    """Sequence of srun commands for ex2 (USHCN climate data)"""
+    """Sequence of srun commands for ex5 (USHCN climate data)"""
 
     #dataNames = ['tavg_2013']
     #dataNames = ['tavg_1314']
@@ -19,13 +19,16 @@ def gen_srun_ex5():
     # 10-year average of tmin, tmax, precipitation. No tavg.
     #dataNames = ['tmmpr_f05t14_nor', 'prcp_10y_t14', 'tpravg_f05t14_nor']
     #dataNames = ['tmmpr_f05t14_nor']
-    Seeds = range(1, 10+1)
+    #Seeds = range(1, 20+1)
+    Seeds = range(21, 40+1)
     rerun = False
-    n = 609
+    n = 400
     #Seeds = [7]
-    #K = [ 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 50, 100, 200 ]
+    #K = [  4, 6,  8, 9, 10, 11, 12, 13, 14, 15, 20, 40]
+    K = [  12]
+    #K = [5, 7, 16, 17, 18, 19 ]
     #K = [11, 12, 13]
-    K = [ 3, 6, 9 ]
+    #K = [ 3, 6, 9 ]
     #K = [4, 5, 6, 7, 8]
     #K = [ 50, 100, 200, 400 ]
     root_folder = os.path.abspath("../")
@@ -41,9 +44,9 @@ def gen_srun_ex5():
                 func = "ex5_ushcn('%s', %d, %d)"%(dn, s, k)
                 job_name = "ex5(%s,%d,%d)"%(dn, s, k)
 
-                #cmd = "srun --partition=wrkstn -o /dev/null --qos=short -J \"%s\" matlab -nodesktop -nosplash -singleCompThread -r \"cd %s; startup; %s; exit;\" & "%(job_name, root_folder, func)
-                #cmd = "srun  -o /dev/null --qos=short -J \"%s\" matlab -nodesktop -nosplash -singleCompThread -r \"cd %s; startup; %s; exit;\" & "%(job_name, root_folder, func)
-                cmd = "matlab -nodesktop -nosplash -singleCompThread -r \"cd %s; startup; %s; exit;\" "%( root_folder, func)
+                #cmd = "srun --mem=6000 --partition=wrkstn -o /dev/null --qos=short -J \"%s\" matlab -nodesktop -nosplash -singleCompThread -r \"cd %s; startup; %s; exit;\" & "%(job_name, root_folder, func)
+                #cmd = "srun  --mem=4000 -o /dev/null --qos=normal -J \"%s\" matlab -nodesktop -nosplash -singleCompThread -r \"cd %s; startup; %s; exit;\" & "%(job_name, root_folder, func)
+                cmd = "matlab -nodesktop -nosplash -r \"cd %s; startup; %s; exit;\" "%( root_folder, func)
                 print cmd
 
 

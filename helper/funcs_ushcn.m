@@ -12,7 +12,20 @@ function [funcs ] = funcs_ushcn( )
     funcs.load_batch_avg = @load_batch_avg;
     funcs.run_ksn_lwb_cube = @run_ksn_lwb_cube;
     funcs.batch_plot_projections = @batch_plot_projections;
+    funcs.subsample_400= @subsample_400;
 
+end
+
+function I=subsample_400()
+    % This function is deterministic. 
+    % Return a list of length sub of indices which are members of 1:1218.
+    %
+    oldRng = rng();
+    rng(16);
+    I = 1:3:1218;
+    Isub = randperm(length(I), 400);
+    I = I(Isub);
+    rng(oldRng);
 end
 
 function ksn_lwb = get_ksn_lwb_cube(dataName, ks, seeds, ns)

@@ -18,7 +18,11 @@ data = load(sprintf('%s.mat', dataName));
 %    timeStamp: [2015 5 26 21 56 53.0395]
 
 % half of 1218 stations.
-subSampleInd = 1:2:size(data.Y, 2);
+%subSampleInd = 1:2:size(data.Y, 2);
+
+% 400 
+funcs = funcs_ushcn();
+subSampleInd = funcs.subsample_400();
 %
 % all stations
 %subSampleInd = 1:size(data.Y, 2);
@@ -29,7 +33,7 @@ Y = data.Y(:, subSampleInd);
 saveFName = sprintf('ushcn-d%s-s%d-k%d-n%d.mat', dataName, seed, k, n);
 fglobal = funcs_global();
 fpath = fglobal.expSavedFile(5, saveFName);
-rerun = false;
+rerun = true;
 if ~rerun && exist(fpath, 'file')
     % skip the experiment if the result already exists
     return;
@@ -43,12 +47,21 @@ dx = 2;
 %% options to lllvm. Include initializations
 op = struct();
 op.seed = seed;
-op.max_em_iter = 10;
+op.max_em_iter = 50;
 op.abs_tol = 1e-1;
 op.G = G;
 op.dx = dx;
-op.alpha0 = 0.1;
-op.gamma0 = 0.1;
+op.alpha0 = 1;
+op.gamma0 = 1;
+op.epsilon = 1e-3;
+
+L = diag(sum(G, 1)) - G;
+invOmega = kron(2*L, eye(dx));
+J = kron(ones(n,1), eye(dx));
+op.cov_c0 = inv(op.epsilon*(J*J') + invOmega) ;
+% initial value of mean_c
+op.mean_c0 = randn(dy, dx*n)*op.cov_c0';
+
 %recorder = create_recorder('print_struct');
 store_every_iter = 10;
 only_cov_diag = false;
