@@ -68,10 +68,7 @@ dy = size(Y,1);
 
 G = double(G);
 
-Yraw = Y;
 Y = reshape(Y,dy,n);
-% subtract the mean
-Y = bsxfun(@minus, Y, mean(Y, 2));
 
 h = sum(G,2);
 L = diag(h) - G;
@@ -85,7 +82,7 @@ end
 %% options to lllvm_1ep. Include initializations
 op = struct();
 op.seed = seed;
-op.max_em_iter = 20;
+op.max_em_iter = 30;
 % absolute tolerance of the increase of the likelihood.
 % If (like_i - like_{i-1} )  < abs_tol, stop EM.
 op.abs_tol = 1e-1;
@@ -117,9 +114,10 @@ op.mean_c0 = randn(dy, dx*n);
 %%
 
 funcs = funcs_global();
-filename = ['USPS_k=' num2str(k) '_dx=' num2str(dx) '_n=' num2str(n) '_s=' num2str(seed)];
+% filename = ['USPS_k=' num2str(k) '_dx=' num2str(dx) '_n=' num2str(n) '_s=' num2str(seed)];
+filename = ['fixing_alpha_USPS_k=' num2str(k) '_dx=' num2str(dx) '_n=' num2str(n) '_s=' num2str(seed)];
 filename_with_directory = funcs.scriptSavedFile([filename '.mat']);
-save(filename_with_directory, 'results', 'Yraw', 'permuted_val');
+save(filename_with_directory, 'results', 'permuted_val');
 
 % change seed back
 rng(oldRng);
