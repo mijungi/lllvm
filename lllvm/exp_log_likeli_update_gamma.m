@@ -76,9 +76,13 @@ Lyy = trace(L*y'*y);
 
 %min_obj =@(a) -(-a/4*QhatLtilde_LQhatsecondmoment + a*mean_cH - a*Lyy + 0.5*dy*(n-1)*log(2*a));
 %opt = struct();
-%opt.TolX = 1e-4;
+%opt.TolX = 1e-6;
 %[gamma] = fminbnd(min_obj, 1e-5, 500, opt);
-gamma = 1;
+ana_gamma = -0.5*dy*(n-1)/(-0.25*QhatLtilde_LQhatsecondmoment + mean_cH - Lyy  );
+gamma = ana_gamma;
+%display(sprintf('|ana_gamma - gamma| = %.6f', abs(gamma-ana_gamma) ));
+%display(sprintf('gamma: %.6f', gamma));
+%gamma = 25;
 
 l1 = -gamma/4*QhatLtilde_LQhatsecondmoment;
 l2 = gamma*mean_cH;
