@@ -1,24 +1,20 @@
 
-% n = 3000;
-% kmat = 200;
-% seedmat = 1;
-% dxmat = 2;
-% n = 1000;
-n = 400; % 80 times 5
-kmat = floor(n./[8, 6, 4, 2, 1]);
-% kmat = n./[8, 4, 2];
-% kmat = n/8;
-% kmat = n/4;
-% kmat = n/2;
-seedmat = 1:10;
+clear all;
+clc;
 
-% dxmat = [2, 4, 8];
-% dxmat = 2;
+n = 400; % 80 times 5
+% kmat = floor(n./[8, 6, 4, 2]);
+kmat = floor(n/20); % screen -r 20892 
+% kmat = floor(n/10); % screen -r 5636
+% kmat = floor(n/8); % screen -r 5758
+% kmat = floor(n/6); % screen -r 5990
+% kmat = floor(n/4); % screen -r 15608
+% kmat = floor(n/2); % screen -r 15919
+
+seedmat = 1:10;
 
 dx = 2;
 
-% for dx_idx = 1: length(dxmat)
-%     dx = dxmat(dx_idx);
 for k_idx = 1:length(kmat)
     k = kmat(k_idx);
     for seed_idx = 1:length(seedmat)
@@ -27,4 +23,4 @@ for k_idx = 1:length(kmat)
         test_USPS_handwritten_digit_data(seed, k, dx);
     end
 end
-% end
+
