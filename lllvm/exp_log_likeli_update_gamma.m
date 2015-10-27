@@ -74,10 +74,11 @@ QhatLtilde_LQhatsecondmoment = trace(QhatLtilde_LQhat*secondmoment);
 mean_cH = trace(mean_c'*H); 
 Lyy = trace(L*y'*y);
 
-min_obj =@(a) -(-a/4*QhatLtilde_LQhatsecondmoment + a*mean_cH - a*Lyy + 0.5*dy*(n-1)*log(2*a));
-opt = struct();
-opt.TolX = 1e-4;
-[gamma] = fminbnd(min_obj, 1e-5, 500, opt);
+%min_obj =@(a) -(-a/4*QhatLtilde_LQhatsecondmoment + a*mean_cH - a*Lyy + 0.5*dy*(n-1)*log(2*a));
+%opt = struct();
+%opt.TolX = 1e-4;
+%[gamma] = fminbnd(min_obj, 1e-5, 500, opt);
+gamma = 1;
 
 l1 = -gamma/4*QhatLtilde_LQhatsecondmoment;
 l2 = gamma*mean_cH;
