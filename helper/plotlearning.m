@@ -5,9 +5,9 @@ function plotlearning(m,n,N,C_Mu,Y, col)
 
 % figure; 
 plotY = reshape(Y,n,N);
-scatter3( plotY(1,:) , plotY(2,:) , plotY(3,:), '.');
+% scatter3( plotY(1,:) , plotY(2,:) , plotY(3,:), '.');
 
-% scatter3( plotY(1,:) , plotY(2,:) , plotY(3,:) , [] , col , 'o', 'filled');
+scatter3( plotY(1,:) , plotY(2,:) , plotY(3,:) , [] , col , 'o', 'filled');
 % title('Manifold (fill circle); inferred manifold (plus); inferred tangent space (plane)'); hold on;
 
 % % Plot learned data
@@ -40,8 +40,8 @@ if (n == 3) && (m == 2)
         tangent = e * tangent /norm(tangent); % normalize
 %         tangent = e * tangent / max(max(tangent)); % normalize
         tspace  = repmat(plotY(:,pp),1,9) + tangent;
-        mesh( reshape(tspace(1,:),3,3), reshape(tspace(2,:),3,3), reshape(tspace(3,:),3,3));
-%         mesh( reshape(tspace(1,:),3,3), reshape(tspace(2,:),3,3), reshape(tspace(3,:),3,3), col(ii)*ones(3,3));
+%         mesh( reshape(tspace(1,:),3,3), reshape(tspace(2,:),3,3), reshape(tspace(3,:),3,3));
+         mesh( reshape(tspace(1,:),3,3), reshape(tspace(2,:),3,3), reshape(tspace(3,:),3,3), col(ii)*ones(3,3));
         grid off; 
 %         axis off;
         hold on; 
