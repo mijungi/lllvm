@@ -45,20 +45,20 @@ for k_idx = 1:length(kmat)
         %%
         %         % (2) visualize results:
         
-        figure(2);
-        subplot(221); plot(results.lwbs);
-        which_to_show = length(results.lwbs);
-        %         which_to_show = 40;
-        xx = reshape(results.mean_x(:,which_to_show), 2, []);
-        
-        subplot(222); scatter(xx(1,:), xx(2,:), 20, col, 'o', 'filled');
-        title('LL-LVM')
-        
-        figure(1);
-        plotlearning(dx,dy,n,reshape(results.mean_c(:,which_to_show),dy,n*dx),Yraw);
-        
-        
-        pause;
+%         figure(2);
+%         subplot(221); plot(results.lwbs);
+%         which_to_show = length(results.lwbs);
+%         %         which_to_show = 40;
+%         xx = reshape(results.mean_x(:,which_to_show), 2, []);
+%         
+%         subplot(222); scatter(xx(1,:), xx(2,:), 20, col, 'o', 'filled');
+%         title('LL-LVM')
+%         
+%         figure(1);
+%         plotlearning(dx,dy,n,reshape(results.mean_c(:,which_to_show),dy,n*dx),Yraw);
+%         
+%         
+%         pause;
         
         %% wonder how LLE works with the same data
         
@@ -107,67 +107,91 @@ end
 hold on;
 seg = 1/length(kmat);
 
-highest_lwb = zeros(length(kmat), 1);
+highest_lwb = zeros(length(kmat), length(seedmat));
 for i=1:length(kmat)
     
-    highest_lwb(i) = max(lower_bound_mat(:,:,i));
+    for j = 1: length(seedmat)
+        
+        highest_lwb(i, j) = max(lower_bound_mat(:,j,i));
+    
+    end
 
 end
 
-figure(2); subplot(223);
-plot(kmat, highest_lwb, '-o');
+% figure(2); subplot(223);
+plot(kmat, mean(highest_lwb,2), '-o'); set(gca, 'xlim', [5.8 11.2])
+% errorbar(kmat, mean(highest_lwb,2),std(highest_lwb,0,2))
 
 %% plotting with k set by the highest lwb
 
 % (1) load the file:
-[val, idx] = max(highest_lwb);
+mean_max_lwb = mean(highest_lwb,2); 
+[val, idx] = max(mean_max_lwb);
 k = kmat(idx);
+seed =4;
+
 load(strcat('fixingalpha_dataflag ', num2str(data_flag), 'seednum ', num2str(seed), 'k ', num2str(k), '.mat'));
 
-        % (2) visualize results:
+% (2) visualize results:
 
 figure(2);
-subplot(221); plot(results.lwbs);
-% which_to_show = length(results.lwbs);
-which_to_show = 40;
+% subplot(221); plot(results.lwbs);
+which_to_show = length(results.lwbs);
+% which_to_show =4;
 xx = reshape(results.mean_x(:,which_to_show), 2, []);
 
-subplot(222); scatter(xx(1,:), xx(2,:), 20, col, 'o', 'filled');
+scatter(xx(1,:), xx(2,:), 20, col, 'o', 'filled');
 title('LL-LVM')
 
 figure(1);
-plotlearning(dx,dy,n,reshape(results.mean_c(:,which_to_show),dy,n*dx),Yraw);
+plotlearning(dx,dy,n,reshape(results.mean_c(:,which_to_show),dy,n*dx),Yraw, col);
 
+
+%% data
+
+% 3D
+plotY = reshape(Yraw,dy,n);
+scatter3( plotY(1,:) , plotY(2,:) , plotY(3,:) , [] , col , 'o', 'filled');
+grid off;
+
+% 2D
+scatter(truex(1,:), truex(2,:), 20, col, 'o', 'filled');
+
+%%
+% graph
+scatter(truex(1,:), truex(2,:), 80, col, 'o', 'filled');
+hold on; 
+gplot(G,truex','b') 
 
 %%
 
-for i=1:length(kmat)
-    
-    firstk = lower_bound_mat(:,:,i);
-    % firstk = lower_bound_mat(:,:,1)./kmat(1);
-    firstk(firstk==0) = nan;
-    firstk_mean = nanmean(firstk,2);
-    firstk_std = nanstd(firstk, 0, 2);
-
-    if i==1
-        plot(1:length(firstk_mean), firstk_mean, 'g');
-    elseif i==2
-        plot(1:length(firstk_mean), firstk_mean, 'r');
-    elseif i==3
-        plot(1:length(firstk_mean), firstk_mean, 'y');
-    elseif i==4
-        plot(1:length(firstk_mean), firstk_mean, 'b');
-    elseif i==5
-        plot(1:length(firstk_mean), firstk_mean, 'k');
-    elseif i==6
-        plot(1:length(firstk_mean), firstk_mean, 'm');
-    elseif i==7
-        plot(1:length(firstk_mean), firstk_mean, 'c');
-    else % i==8
-        plot(1:length(firstk_mean), firstk_mean, 'k--');
-    end
-    
-end
+% for i=1:length(kmat)
+%     
+%     firstk = lower_bound_mat(:,:,i);
+%     % firstk = lower_bound_mat(:,:,1)./kmat(1);
+%     firstk(firstk==0) = nan;
+%     firstk_mean = nanmean(firstk,2);
+%     firstk_std = nanstd(firstk, 0, 2);
+% 
+%     if i==1
+%         plot(1:length(firstk_mean), firstk_mean, 'g');
+%     elseif i==2
+%         plot(1:length(firstk_mean), firstk_mean, 'r');
+%     elseif i==3
+%         plot(1:length(firstk_mean), firstk_mean, 'y');
+%     elseif i==4
+%         plot(1:length(firstk_mean), firstk_mean, 'b');
+%     elseif i==5
+%         plot(1:length(firstk_mean), firstk_mean, 'k');
+%     elseif i==6
+%         plot(1:length(firstk_mean), firstk_mean, 'm');
+%     elseif i==7
+%         plot(1:length(firstk_mean), firstk_mean, 'c');
+%     else % i==8
+%         plot(1:length(firstk_mean), firstk_mean, 'k--');
+%     end
+%     
+% end
 
 
 
