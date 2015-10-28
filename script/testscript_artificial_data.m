@@ -4,18 +4,19 @@
 clear;
 clc;
 
-n = 400; % total number of datapoints
-data_flag = 1; % 3D Gaussian
-kmat = [5, 10, 20, 40, 80, 160];
-
-% data_flag = 3; % swiss roll
-% n = 800; % total number of datapoints
+% n = 400; % total number of datapoints
+% data_flag = 1; % 3D Gaussian
+% kmat = 4:2:18; 
 % kmat = [5, 10, 20, 40, 80, 160];
 
-% maximum number of EM iterations to perform
-max_em_iter = 30;
+data_flag = 3; % swiss roll
+n = 400; % total number of datapoints
+kmat = 4:11;
 
-maxseed = 10;
+% maximum number of EM iterations to perform
+max_em_iter = 50;
+
+maxseed = 1;
 
 for seednum = 1:maxseed
     
@@ -36,8 +37,6 @@ for seednum = 1:maxseed
         
         Yraw = Y;
         Y = reshape(Y,dy,n);
-        % subtract the mean
-        %     Y = bsxfun(@minus, Y, mean(Y, 2));
         
         h = sum(G,2);
         L = diag(h) - G;
@@ -50,6 +49,7 @@ for seednum = 1:maxseed
         
         %% options to lllvm_1ep. Include initializations
         op = struct();
+        op.col = col;
         op.seed = seednum;
         op.max_em_iter = max_em_iter;
         % absolute tolerance of the increase of the likelihood.
@@ -64,7 +64,7 @@ for seednum = 1:maxseed
         op.alpha0 = rand;
         % initial value of gamma.  V^-1 = gamma*I_dy where V is the covariance in the
         % likelihood of  the observations Y.
-        op.gamma0 = rand;
+        op.gamma0 = 0.1*rand;
         %recorder = create_recorder('print_struct');
         store_every_iter = 5;
         only_cov_diag = false;
@@ -78,7 +78,7 @@ for seednum = 1:maxseed
         
         [results, op ] = lllvm_1ep(Y, op);
         
-        save(strcat('fixingalpha_dataflag ', num2str(data_flag), 'seednum ', num2str(seednum), 'k ', num2str(k), '.mat'), 'results');
+        save(strcat('fixingalpha_dataflag ', num2str(data_flag), 'seednum ', num2str(seednum), 'k ', num2str(k), '.mat'), 'results', 'Yraw', 'col');
 
 %         save(strcat('dataflag ', num2str(data_flag), 'seednum ', num2str(seednum), 'k ', num2str(k), '.mat'), 'results');
         
@@ -109,19 +109,35 @@ end
 
 %%
 
-% data_flag = 1;
+% data_flag = 3;
 % seednum = 1;
-% k = 20;
-% load(strcat('dataflag ', num2str(data_flag), 'seednum ', num2str(seednum), 'k ', num2str(k), '.mat'))
-%
-% which = 10;
-%
+% k = 5;
+% % kmat = [5, 10, 20, 40, 80, 160];
+% load(strcat('fixingalpha_dataflag ', num2str(data_flag), 'seednum ', num2str(seednum), 'k ', num2str(k), '.mat'))
+% 
+% plot(results.lwbs)
+% 
+% %%
+% 
+% oldRng = rng();
+% rng(seednum);
+%     
+% dx = 2;
+% n = 800;
+% dy = 3; 
+% 
+% [n, dy, Y, G, dmat, col, truex] = getartificial(n, data_flag, k);
+% 
+% Yraw = Y;
+%     %%    
+% which = 3;
+% 
 % figure(1);
 % plotlearning(dx,dy,n,reshape(results.mean_c(:,which),dy,n*dx),Yraw);
-%
+% 
 % figure(2);
 % subplot(211); plot(results.lwbs);
 % reshaped_mean_x = reshape(results.mean_x(:,which), dx, []);
 % subplot(212); scatter(reshaped_mean_x(1,:), reshaped_mean_x(2,:), 20, col, 'o', 'filled');
-
-
+% 
+% rng(oldRng);
