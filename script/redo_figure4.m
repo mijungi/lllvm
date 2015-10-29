@@ -28,17 +28,18 @@ idx_red_pt = sort_idx(end-25);
 
 %% show them in 2D.
 
-scatter(truex(1,:), truex(2,:), 10, col, 'o');
+scatter(truex(1,:), truex(2,:), 60, col, 'o', 'filled');
 hold on;
-scatter(truex(1,idx_blue_pt), truex(2,idx_blue_pt), 40, 'bo', 'filled');
-scatter(truex(1,idx_red_pt), truex(2,idx_red_pt), 40, 'ro', 'filled');
+scatter(truex(1,idx_blue_pt), truex(2,idx_blue_pt), 100, 'bo', 'filled');
+scatter(truex(1,idx_red_pt), truex(2,idx_red_pt), 100, 'ro', 'filled');
 
 %% show them in 3D.
 
-scatter3( Y(1,:) , Y(2,:) , Y(3,:) , [] , col , 'o'); grid off;
+figure(2);
+scatter3( Y(1,:) , Y(2,:) , Y(3,:), 40  , col , 'o', 'filled'); grid off;
 hold on;
-scatter3( Y(1,idx_blue_pt) , Y(2,idx_blue_pt) , Y(3,idx_blue_pt) , 'bo', 'filled'); grid off;
-scatter3( Y(1,idx_red_pt) , Y(2,idx_red_pt) , Y(3,idx_red_pt) , 'ro', 'filled'); grid off;
+scatter3( Y(1,idx_blue_pt) , Y(2,idx_blue_pt) , Y(3,idx_blue_pt) , 100, 'bo', 'filled'); grid off;
+scatter3( Y(1,idx_red_pt) , Y(2,idx_red_pt) , Y(3,idx_red_pt) , 100, 'ro', 'filled'); grid off;
 
 
 %%
