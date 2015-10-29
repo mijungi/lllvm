@@ -23,8 +23,8 @@ Y = reshape(Yraw,dy,n);
 % subplot(223); scatter(truex(1,:), truex(2,:), 20, col, 'o', 'filled');
 
 [sort_val, sort_idx] = sort(col);
-idx_blue_pt = sort_idx(20);
-idx_red_pt = sort_idx(end-80);
+idx_blue_pt = sort_idx(25);
+idx_red_pt = sort_idx(end-25);
 
 %% show them in 2D.
 
@@ -87,14 +87,13 @@ save(strcat('shortcircuiting_dataflag ', num2str(data_flag), 'seednum ', num2str
 
 %%
 
-reshaped_mean_x = reshape(results.mean_x(:,end), dx, []);
+reshaped_mean_x = reshape(results.mean_x(:,20), dx, []);
 %    -541.7970: without shortcircuiting (epsilon = 0.005)
 %  -488.2: with shortcircuiting
-scatter(reshaped_mean_x(1,:), reshaped_mean_x(2,:),10,  col, 'o');
+scatter(reshaped_mean_x(1,:), reshaped_mean_x(2,:), 80,  col, 'o', 'filled');
 % title(' -2069.4: without shortcircuiting');
-hold on;
-scatter(reshaped_mean_x(1,idx_blue_pt), reshaped_mean_x(2,idx_blue_pt), 40, 'bo', 'filled');
-scatter(reshaped_mean_x(1,idx_red_pt), reshaped_mean_x(2,idx_red_pt), 40, 'ro', 'filled');
-
+% hold on;
+% scatter(reshaped_mean_x(1,idx_blue_pt), reshaped_mean_x(2,idx_blue_pt), 100, 'bo', 'filled');
+% scatter(reshaped_mean_x(1,idx_red_pt), reshaped_mean_x(2,idx_red_pt), 100, 'ro', 'filled');
 
 
