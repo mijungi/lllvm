@@ -13,6 +13,7 @@ function [funcs ] = funcs_ushcn( )
     funcs.run_ksn_lwb_cube = @run_ksn_lwb_cube;
     funcs.batch_plot_projections = @batch_plot_projections;
     funcs.subsample_400= @subsample_400;
+    funcs.mean_x2d_movie_frames = @mean_x2d_movie_frames;
 
 end
 
@@ -150,6 +151,64 @@ for i=1:total_plots
 end
 
 
+end
+
+function frames = mean_x2d_movie_frames(results, k, subSampleInd, data, movie_dest)
+% Generate a sequence of frames showing the time-evolution of mean_x during 
+% EM. 
+%  - results = a struct returned by LLLVM
+%  - data = data struct of the weather data. It has the formdata = 
+%         desc: '10-year average monthly precipitation from 2005 to 2014.'
+%       laloel: [3x1218 double]
+%      station: {1x1218 cell}
+%          All: [12x1218x10 double]
+%            Y: [12x1218 double]
+%          Std: [12x1218 double]
+%    timeStamp: [2015 5 28 18 54 38.9886]
+%  - movie_dest = a file name to save the movie
+%%
+
+lalo_pivot = [48.9775; -122.7928];
+bottom_mid_pivot = [27.14; -98.12];
+lola_pivot = [lalo_pivot(2); lalo_pivot(1)];
+
+% distances to the pivot point
+lola = [data.laloel(2, subSampleInd); data.laloel(1, subSampleInd)];
+dist2pivot = sqrt(sum(bsxfun(@minus, lola, lola_pivot).^2, 1));
+% sizes of the points.
+S = sqrt(sum(bsxfun(@minus, lola(2, :), bottom_mid_pivot(2, :)).^2, 1));
+dist2sizePivot = 1.1.^S/3000 ;
+
+em_iters = size(results.mean_x, 2);
+%em_iters = 3;
+n = size(results.mean_x, 1)/2;
+figure
+pause(2);
+for t=1:em_iters
+    mu_x = reshape(results.mean_x(:, t), 2, []);
+    % plot LL-LVM's projected points
+    scatter(mu_x(1, :), mu_x(2, :), dist2sizePivot, dist2pivot, 'fill');
+    set(gca, 'FontSize', 16);
+    axis off 
+    title(sprintf('LLLVM. k=%d. n=%d. EM iter=%d. lwb=%.5f.', k, n, t, results.lwbs(t) ));
+
+    frames(t) = getframe(gcf);
+end
+
+% show the movie 
+% use 1st frame to get dimensions
+%[h, w, p] = size(frames(1).cdata);
+%hf = figure; 
+%% resize figure based on frame's w x h, and place at (150, 150)
+%set(hf,'Position', [150 150 w h]);
+%axis off
+% Place frames at bottom left. Play the movie
+%movie(hf,frames,4,15,[0 0 0 0]);
+%
+v = VideoWriter(movie_dest, 'Archival');
+v.FrameRate = 2;
+open(v);
+writeVideo(v, frames)
 end
 
 function plot_projected_map(mu_x, k, subSampleInd, data, gplvm_proj)

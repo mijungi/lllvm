@@ -20,17 +20,14 @@ def gen_srun_ex5():
     #dataNames = ['tmmpr_f05t14_nor', 'prcp_10y_t14', 'tpravg_f05t14_nor']
     #dataNames = ['tmmpr_f05t14_nor']
     #Seeds = range(1, 20+1)
-    Seeds = range(21, 40+1)
+    #Seeds = range(26, 27+1)
+    Seeds = [27]
     rerun = False
     n = 400
     #Seeds = [7]
     #K = [  4, 6,  8, 9, 10, 11, 12, 13, 14, 15, 20, 40]
-    K = [  12]
-    #K = [5, 7, 16, 17, 18, 19 ]
-    #K = [11, 12, 13]
-    #K = [ 3, 6, 9 ]
-    #K = [4, 5, 6, 7, 8]
-    #K = [ 50, 100, 200, 400 ]
+    #K = [  12]
+    K = [12, 9, 15, 6, 18]
     root_folder = os.path.abspath("../")
     print "#!/bin/bash"
     for dn in dataNames:
