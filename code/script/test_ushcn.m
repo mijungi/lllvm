@@ -34,14 +34,6 @@ if use_true_G
     G = makeKnnG(data.laloel(1:2, subSampleInd), k);
 else
     G = makeKnnG(Y, k);
-    %
-    % Gaussian kernel. Independent of k.
-    %sum2Y = sum(Y.^2, 1);
-    %D2 = bsxfun(@plus, sum2Y', sum2Y) - 2*(Y'*Y);
-    %D2(abs(D2) <= 1e-5) = 0;
-    %med = meddistance(Y);
-    %G = exp(-D2./(2*med^2/2)) - eye(n);
-    %G(G <= 1e-4) = 0;
 
     %geodesic distance using Dijkstra
     %D_dijk = dijkstra(sqrt(D2), 1:n);
