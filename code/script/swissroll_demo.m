@@ -5,18 +5,18 @@ clear;
 clc;
 
 data_flag = 3; % swiss roll
-n = 200; % total number of datapoints
-k = 5;
+n = 400; % total number of datapoints
+k = 9;
 
 % maximum number of EM iterations to perform
-max_em_iter = 100;
+max_em_iter = 50;
 
 seednum = 4;
 
 oldRng = rng();
 rng(seednum);
 
-%% generate artificial data
+% generate artificial data
 
 [n, dy, Y, G, dmat, col, truex] = getartificial(n, data_flag, k);
 
@@ -35,7 +35,7 @@ if rank(L)< n-1
     break;
 end
 
-%% options to lllvm_1ep. Include initializations
+% options to lllvm_1ep. Include initializations
 op = struct();
 op.col = col;
 op.seed = seednum;
@@ -71,6 +71,9 @@ save(strcat('swissroll_demo ', num2str(data_flag), 'seednum ', num2str(seednum),
 rng(oldRng);
 
 %% visualise results
+
+clear all;
+clc;
 
 k = 9;
 seednum = 4;
