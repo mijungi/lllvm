@@ -7,16 +7,16 @@ data_flag = 3; % swiss roll
 % n: Number of data points to generate.
 n = 400; 
 % k: k in the k-nearest-neighbours graph construction
-k = 8;
+k = 9;
 
 % maximum number of EM iterations to perform
 % In practice, we might need more iterations.
 % If you want to get better results, try to increase this and reduce 
 % the abs_tol (absolute tolerance threshold for convergence check) below.
-max_em_iter = 50;
+max_em_iter = 70;
 
 % random seed. This will affect the initializations of LLLVM.
-seednum = 3;
+seednum = 4;
 oldRng = rng();
 rng(seednum);
 
