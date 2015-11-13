@@ -53,12 +53,12 @@ These results can be obtained by running
 Here is the set of local tangent planes learned by LL-LVM.
 
 ![Learned local tangent planes on each
-point](https://raw.githubusercontent.com/mijungi/lllvm/img/swiss_tangents_n400k9.png)
+point](https://raw.githubusercontent.com/mijungi/lllvm/master/img/swiss_tangents_n400k9.png)
 
 The following figure shows the evidence lower bounds during the EM, and 
 the dimensionally reduced points in the two-dimensional space.
 
 ![Evidence lower bounds and
-x](https://raw.githubusercontent.com/mijungi/lllvm/img/swiss_x_lwbs_n400k9.png)
+x](https://raw.githubusercontent.com/mijungi/lllvm/master/img/swiss_x_lwbs_n400k9.png)
 
 Here we use n=400. The unrolling will be much cleaner with higher n.
