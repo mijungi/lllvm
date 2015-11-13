@@ -67,7 +67,7 @@ Ltilde = inv(epsilon*ones(n, n) + 2*gamma*L);
 % E[C^T C]: a n*dx x n*dx matrix
 ECTC = dy*cov_c + mean_c' * mean_c;
 % an nxn cell array. Each element is a dx x dx matrix.
-ECTC_cell = mat2cell(ECTC, dx*ones(1, n), dx*ones(1, n));
+%ECTC_cell = mat2cell(ECTC, dx*ones(1, n), dx*ones(1, n));
 
 if nnz(G)/numel(G) <= 0.01
     % sparse logical G
