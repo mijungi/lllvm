@@ -76,89 +76,40 @@ else
     spLogG = logical(G);
 end
 
-%%
-% A = zeros(n*dx, n*dx);
-% % tic;
-% for i=1:n
-% %     compute this only for neighbouring j's of i
-%     j_nonzero_idx = find(G(i,:));
-%     j_nonzero_idx =  j_nonzero_idx(logical(j_nonzero_idx>i));
-%     for jj=1:length(j_nonzero_idx)
-%         j = j_nonzero_idx(jj); 
-%         Aij = compute_Aij_wittawat2(Ltilde, G, ECTC_cell, gamma, i, j);
-%         A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
-%     end
-% end
-% A = A + A'; 
-
-%%
-% toc;
-% compute the upper part. 
-use_scaled_identity_check = true;
-n_thresh = 700;
-%use_scaled_identity_check = false;
-A = zeros(n*dx, n*dx);
-if use_scaled_identity_check && are_subblocks_scaled_identity(ECTC_cell)
-    % This subblocks of ECTC_cell will become scaled identity after a few 
-    % steps of EM. This if part is to make the computation faster.
-    % One can always use the else part for everything (just slow).
-    CCscale = cell2diagmeans(ECTC_cell);
-    if n <= n_thresh
-        % The following line will take O(n^3) storage.
-        A = compute_A_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx);
-    else
-        % n is big. Use loops to avoid memory cost.
-        for i=1:n
-            for j=i+1:n
-                Aij = compute_Aij_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx, i, j);
-                A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
-
-                % check with the full version
-                %if true 
-                %  Aij_full = compute_Aij_wittawat2(Ltilde, spLogG, ECTC_cell, gamma,  i, j);
-                %  display(sprintf('|Aij - Aij_full|_fro = %.5g',  norm(Aij - Aij_full) ));
-                %end
-            end
-        end
-        A = A + A';
-        % compute the diagonal
-        for i=1:n
-            Aii = compute_Aij_scaled_iden(Ltilde, spLogG, CCscale, gamma, dx, i, i);
-            A(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Aii;
-        end
-    end
-
-else
-    % subblocks of ECTC_cell are not scaled identity.
-    if n <= n_thresh
-        An3 = compute_A_n3(Ltilde, spLogG, ECTC, gamma, dx);
-        A = An3;
-    else
-        for i=1:n
-            for j=i+1:n
-                Aij = compute_Aij_wittawat2(Ltilde, spLogG, ECTC_cell, gamma, i, j);
-                %display(sprintf('|Aij - Aij2| = %.6f', norm(Aij-Aij2)));
-
-                A(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Aij;
-            end
-        end
-        clear j
-        A = A + A';
-        % compute the diagonal
-        for i=1:n
-            Aii = compute_Aij_wittawat2(Ltilde, spLogG, ECTC_cell, gamma, i, i);
-            A(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Aii;
-        end
-    end
-    %display(sprintf('|An3 - A|_fro = %.6f', norm(An3-A) ));
-end
+A = compute_A_ultimate(Ltilde, spLogG, ECTC, gamma, dx);
+%An3 = compute_A_n3(Ltilde, spLogG, ECTC, gamma, dx);
+%display(sprintf('|A-An3| = %.5f', norm(A-An3, 'fro') ) );
 
 end %end compute_A_wittawat(..)
 
+
+function A = compute_A_ultimate(Ltilde, spLogG, ECTC, gamma, dx)
+% An improved version of compute_A_n3. Memory: O(n^2)
+    n = size(Ltilde, 1);
+
+    AllCoeff = zeros(n, n, dx, dx);
+    for r=1:dx 
+        for s=1:dx
+            % n x n covariance matrix. Each element i,j is E[(C_i^\top C_j)_{r,s}]
+            % ECC_rs may not be positive definite if r != s. 
+            ECC_rs = ECTC(r:dx:end, s:dx:end);
+            Coeff_rs_nof = compute_coeff_A_nofactor(Ltilde, spLogG, ECC_rs, gamma);
+            Coeff_rs = Coeff_rs_nof;
+            AllCoeff(:, :, r, s) = Coeff_rs;
+        end
+    end
+    AllCoeff = permute(AllCoeff, [3 4 1 2]);
+    % See http://www.ee.columbia.edu/~marios/matlab/Matlab%20array%20manipulation%20tips%20and%20tricks.pdf
+    % section 6.1.1 to understand what I am doing.
+    AllCoeff = permute(AllCoeff, [1 3 2 4]);
+    A = reshape(AllCoeff, [dx*n, dx*n]);
+
+end
+
 function A = compute_A_n3(Ltilde, spLogG, ECTC, gamma, dx)
-% Compute <A> using O(n^3) memory. This is the fastest function but unfortunately 
-% requires large memory. 
-%
+% Compute <A> using O(n^3) memory. 
+% Wittawat: This function is deprecated. Use compute_A_ultimate
+% %
 
     % decompose Ltilde into La'*La
     [U, V] = eig(Ltilde);
@@ -200,6 +151,31 @@ function Coeff = compute_coeff_A(La, spLogG, CCscale, gamma, dx)
     Ubar = A_factor(La, U, spLogG);
     Vbar = A_factor(La, V, spLogG);
     Coeff = (gamma^2)*(Ubar'*Vbar);
+end
+
+function Coeff = compute_coeff_A_nofactor(Ltilde, spLogG, CCscale, gamma)
+% An improved version of compute_coeff_A. Memory requirement: O(n^2) 
+% @author Wittawat on 12 Nov 2015
+%  - Ltilde: 
+%  - CCscale is square but not necessarily symmetric.
+%
+
+    % decompose CCscale = U'*V 
+    UTV = CCscale;
+    G = double(spLogG);
+    B = G - diag(sum(G, 1));
+
+    UTVG = UTV*G;
+    LTLG = Ltilde*G;
+    GTUTV = G'*UTV;
+    GTL2 = G'*Ltilde;
+
+    %line1 = B'*(Ltilde.*UTV)*B - B'*(Ltilde.*UTVG) + B'*(LTLG.*UTV);
+    line1 = B'*( (Ltilde.*UTV)*B - (Ltilde.*UTVG) + (LTLG.*UTV) );
+    line2 = -(Ltilde.*GTUTV)*B + Ltilde.*(G'*UTVG) - GTUTV.*LTLG;
+    line3 = (GTL2.*(UTV))*B  -GTL2.*UTVG + UTV.*(G'*LTLG);
+
+    Coeff = (gamma^2)*(line1 + line2 + line3);
 end
 
 function M = A_factor(La, U, spLogG )

@@ -6,9 +6,57 @@ classdef GammaUtils
 
     methods(Static)
 
+        function [ Gam ] = compute_Gamma_ultimate(Ltilde, spLogG, EXX, dx)
+            % An improved version of compute_Gamma_n3. Memory: O(n^2)
+            %This is the fastest function .
+            % - Ltilde: n x n 
+            % - spLogG: G in logical (not double).  Can be sparse 
+            % - EXX: dx*n x dx*n matrix where each dx x dx block is E[xx^T]
+            % - dx: an integer. dimensionality of x.
+            %
+
+            n = size(Ltilde, 1);
+            AllCoeff = zeros(n, n, dx, dx);
+            for r=1:dx 
+                for s=1:dx
+                    EXX_rs = EXX(r:dx:end, s:dx:end);
+                    Coeff_rs = GammaUtils.compute_coeff_Gamma_nofactor(Ltilde, spLogG, EXX_rs);
+                    AllCoeff(:, :, r, s) = Coeff_rs;
+                end
+            end
+            AllCoeff = permute(AllCoeff, [3 4 1 2]);
+            % See http://www.ee.columbia.edu/~marios/matlab/Matlab%20array%20manipulation%20tips%20and%20tricks.pdf
+            % section 6.1.1 to understand what I am doing.
+            AllCoeff = permute(AllCoeff, [1 3 2 4]);
+            Gam = reshape(AllCoeff, [dx*n, dx*n]);
+
+        end % end compute_Gamma_n3
+
+        function Coeff = compute_coeff_Gamma_nofactor(Ltilde, spLogG, C)
+            % An improved version of compute_coeff_Gamma. Memory 
+            % requirement: O(n^2)
+            %  - C is square but not necessarily symmetric. 
+            %
+
+            UTV = C;
+            G = double(spLogG);
+            B = G + diag(sum(G, 1));
+
+            UTVG = UTV*G;
+            LTLG = Ltilde*G;
+            GTUTV = G'*UTV;
+            GTL2 = G'*Ltilde;
+
+            %line1 = B'*(Ltilde.*UTV)*B - B'*(Ltilde.*UTVG) - B'*(LTLG.*UTV);
+            line1 = B'*( (Ltilde.*UTV)*B - (Ltilde.*UTVG) - (LTLG.*UTV) );
+            line2 = -(Ltilde.*GTUTV)*B + Ltilde.*(G'*UTVG) + GTUTV.*LTLG;
+            line3 = -(GTL2.*(UTV))*B  +GTL2.*UTVG + UTV.*(G'*LTLG);
+
+            Coeff = line1 + line2 + line3;
+        end
+
         function [ Gam ] = compute_Gamma_n3(Ltilde, spLogG, EXX, dx)
             %COMPUTE_GAMMA_N3 Compute <Gamma> using O(n^3) memory. 
-            %This is the fastest function but unfortunately  requires large memory. 
             % - Ltilde: n x n 
             % - spLogG: G in logical (not double).  Can be sparse 
             % - EXX: dx*n x dx*n matrix where each dx x dx block is E[xx^T]
@@ -29,13 +77,13 @@ classdef GammaUtils
                     % EXX_rs may not be positive definite if r != s.
                     EXX_rs = EXX(r:dx:end, s:dx:end);
                     if r==s
-                        % decompose M into T'*T
-                        [UC, VC] = eig(EXX_rs);
-                        T = diag(sqrt(diag(VC)))*UC';
-                        Ubar = GammaUtils.Gamma_factor(La, T, spLogG);
-                        Coeff_rs = (Ubar'*Ubar);
+                      % decompose M into T'*T
+                      [UC, VC] = eig(EXX_rs);
+                      T = diag(sqrt(diag(VC)))*UC';
+                      Ubar = GammaUtils.Gamma_factor(La, T, spLogG);
+                      Coeff_rs = (Ubar'*Ubar);
                     else 
-                        Coeff_rs = GammaUtils.compute_coeff_Gamma(La, spLogG, EXX_rs, dx);
+                       Coeff_rs = GammaUtils.compute_coeff_Gamma(La, spLogG, EXX_rs, dx);
                     end
                     AllCoeff(:, :, r, s) = Coeff_rs;
                 end
@@ -64,6 +112,7 @@ classdef GammaUtils
             Vbar = GammaUtils.Gamma_factor(La, V, spLogG);
             Coeff = (Ubar'*Vbar);
         end
+
 
         function M = Gamma_factor(La, U, spLogG )
             % Return a matrix M : n*size(U, 1) x n

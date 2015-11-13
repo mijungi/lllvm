@@ -20,12 +20,12 @@ dx = size(EXX,1)/n;
 
 % EXX = cov_x + mean_x * mean_x';
 % an nxn cell array. Each element is a dx x dx matrix.
-EXX_cell = mat2cell(EXX, dx*ones(1, n), dx*ones(1, n));
+%EXX_cell = mat2cell(EXX, dx*ones(1, n), dx*ones(1, n));
 % compute Ltilde : inv(epsilon*ones_n*ones_n' + 2*gamma*L)
-% h = sum(G,2);
-% L = diag(h) - G;
+%h = sum(G,2);
+%L = diag(h) - G;
 
-% Ltilde = inv(epsilon*ones(n, n) + 2*gamma*L); 
+%Ltilde = inv(epsilon*ones(n, n) + 2*gamma*L); 
 
 % computing the upper off-diagonal first 
 % tic;
@@ -36,88 +36,19 @@ if nnz(G)/numel(G) <= 0.01
 else
     spLogG = logical(G);
 end
-Gamma_L = zeros(n*dx, n*dx); 
 
-% toc; 
-
-%%
-% tic; 
-% for i=1:n
-%     j_nonzero_idx = find(G(i,:));
-%     j_nonzero_idx =  j_nonzero_idx(logical(j_nonzero_idx>i));
-%     for jj=1:length(j_nonzero_idx)
-%         j = j_nonzero_idx(jj);
-%         Gamij_L = compute_Gamij_svd(Ltilde_L, G, EXX_cell, i, j);
-%         Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
-%     end
-% end
-% Gamma_L = Gamma_L + Gamma_L';
-% toc; 
-%%
+%Gam_Ln3 = GammaUtils.compute_Gamma_n3(Ltilde_L, spLogG, EXX, dx);
+Gam_ultimate = GammaUtils.compute_Gamma_ultimate(Ltilde_L, spLogG, EXX, dx);
+% Wittawat: The two versions are not exactly the same. I do not know why. 
+% I guess this is a numerical issue; although the Frobenius norm error is quite 
+% large (<1.0). If I pass in Ltilde instead of Ltilde_L to both versions, 
+% I get Fro. norm = 0. The error is probably due to the fact that Ltilde_L has 
+% one eigenvalue = 0, and that the eigendecomposition used in 
+% GammaUtils.compute_Gamma_n3 does not give exactly 0 for the eigenvalue.
 %
-% tic; 
-use_scaled_identity_check = true;
-n_thresh = 700;
-%use_scaled_identity_check = false;
-if use_scaled_identity_check && are_subblocks_scaled_identity(EXX_cell)
-    % This subblocks of EXX_cell will become scaled identity after a few 
-    % steps of EM. This if part is to make the computation faster.
-    % One can always use the else part for everything (just slow).
-    M = cell2diagmeans(EXX_cell);
-    if n <= n_thresh
-        Gamma_L = compute_Gam_scaled_iden(Ltilde_L, spLogG, M, dx);
-        %display(sprintf('|Gam_L - GamL_cubic| = %.6f', norm(Gamma_L-GamL_cubic, 'fro') ));
-    else
-        for i=1:n
-            for j=i+1:n 
-                Gamij_L = compute_Gamij_scaled_iden(Ltilde_L, spLogG, M, dx, i, j);
-                Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
-
-                % check with the full version
-                %if true 
-                %    Gamij_L_full = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, j);
-                %    display(sprintf('|Gamij_L - Gamij_L_full|_fro = %.5g', ...
-                %        norm(Gamij_L-Gamij_L_full) ));
-                %end
-            end
-        end
-        Gamma_L = Gamma_L + Gamma_L';
-        clear j
-        % compute the diagonal
-        for i=1:n
-            Gamii_L = compute_Gamij_scaled_iden(Ltilde_L, spLogG, M, dx, i, i);
-            Gamma_L(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Gamii_L;
-        end
-    end
-
-else
-    % Subblocks of EXX_cell are not scaled identity.
-    if n <= n_thresh
-
-        Gam_Ln3 = GammaUtils.compute_Gamma_n3(Ltilde_L, spLogG, EXX, dx);
-        Gamma_L = Gam_Ln3;
-    else
-
-        for i=1:n
-            for j=i+1:n
-                Gamij_L = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, j);
-                Gamma_L(1+(i-1)*dx:i*dx, 1+(j-1)*dx:j*dx) = Gamij_L;
-
-                %Gamij_L2 = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, j);
-                %display(sprintf('|Gamij_L - Gamij_L2| = %.6f', norm(Gamij_L-Gamij_L2)));
-            end
-        end
-        Gamma_L = Gamma_L + Gamma_L';
-        clear j
-        % compute the diagonal
-        for i=1:n
-            Gamii_L = compute_Gamij_svd2(Ltilde_L, spLogG, EXX_cell, i, i);
-            Gamma_L(1+(i-1)*dx:i*dx, 1+(i-1)*dx:i*dx) = Gamii_L;
-        end
-    end
-    %display(sprintf('|Gamma_L - Gam_Ln3|_fro = %.6f', norm(Gamma_L-Gam_Ln3) ));
-
-end
+%display(sprintf('|Gam_Ln3 - Gam_ultimate| = %.5f', norm(Gam_Ln3-Gam_ultimate, 'fro') ));
+Gamma_L = Gam_ultimate;
+%Gamma_L = Gam_Ln3;
 
 Gamma = gamma/2*Gamma_L;
 end% end compute_Gamma_wittawat
