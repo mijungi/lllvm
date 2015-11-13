@@ -17,6 +17,9 @@ Running LL-LVM on a dataset is straightforward. For full demo script see,
 [swissroll_demo.m](https://github.com/mijungi/lllvm/blob/master/code/script/swissroll_demo.m).
 
 ```matlab 
+% In Matlab, change directory into the code/ folder.
+% Run startup.m to add necessary paths.
+%
 % Assume that we are given a dataset as a dy x n matrix Y.
 
 % k: k in the k-nearest-neighbours graph construction
