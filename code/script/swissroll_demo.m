@@ -67,7 +67,7 @@ op.mean_c0 = rand(dy, dx*n);
 %op.mean_c0 = randn(dy, dx*n)*op.cov_c0';
 
 % Call lllvm_1ep to run LL-LVM.
-% Relevant variances are in the struct "results".
+% Relevant variables are in the struct "results".
 [results, op ] = lllvm_1ep(Y, op);
 
 % An example of how to save the results. 
