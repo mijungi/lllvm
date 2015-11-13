@@ -1,7 +1,13 @@
-function plotlearning(m,n,N,C_Mu,Y, col)
+function plotlearning(m,n,N,C_Mu,Y, col, tangent_scaling)
 % [N,m,n,Y,~,~,dmat] = fixedparams;
+% tangent_scaling: the multiplicative scaling of each plotted tangent space.
+%  If unspecified, default = 0.1.
 
 % global p_idx
+
+if nargin < 7
+    tangent_scaling = 0.1;
+end
 
 % figure; 
 plotY = reshape(Y,n,N);
@@ -21,7 +27,7 @@ if (n == 3) && (m == 2)
 %     p_N = 160; % plot this many tangent spaces
     p_N = N;
     %e   = 0.10*(max(reshape(plotY(1:2,:),1,2*N))-min(reshape(plotY(1:2,:),1,2*N)));
-    e = 0.1*(max(max(plotY))- min(min(plotY)));
+    e = tangent_scaling*(max(max(plotY))- min(min(plotY)));
     %mean(reshape(dmat,1,N*N)); % plot tangent space around this plane
     E   = [ -1 -1 -1  0  0  0  1  1  1; ...
             -1  0  1 -1  0  1 -1  0  1] ;

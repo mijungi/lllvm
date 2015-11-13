@@ -1,5 +1,6 @@
 classdef GammaUtils
     %GAMMAUTILS A list of static functions for computing <Gamma>
+    %@author Wittawat
     
     properties
     end
@@ -57,6 +58,7 @@ classdef GammaUtils
 
         function [ Gam ] = compute_Gamma_n3(Ltilde, spLogG, EXX, dx)
             %COMPUTE_GAMMA_N3 Compute <Gamma> using O(n^3) memory. 
+            %Wittawat: This function is deprecated. Use compute_Gamma_ultimate.
             % - Ltilde: n x n 
             % - spLogG: G in logical (not double).  Can be sparse 
             % - EXX: dx*n x dx*n matrix where each dx x dx block is E[xx^T]
