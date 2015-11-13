@@ -24,7 +24,6 @@ k = 9;
 % Construct a neighbourhood graph with kNN. n x n matrix.
 G = makeKnnG(Y, k);
 
-
 % options to lllvm_1ep. Include initializations
 % Most options are optional. See lllvm_1ep file directly for possible options.
 % The only mandatory settings are G and dx.
@@ -34,13 +33,12 @@ op.G = G;
 % The desired reduced dimension. Say we want to reduce to 2 dimensions.
 op.dx = 2;
 
-
 % Call lllvm_1ep to run LL-LVM.
-% Relevant variables are in the struct "results".
+% Relevant output variables are in the struct "results".
 [results, op ] = lllvm_1ep(Y, op);
 
 % In particular, results.mean_x is a dx*n x #iterations matrix.
-% To get the result x as a  dx x n matrix, we can do.
+% To get the result x as a dx x n matrix, we can do
 x = reshape(results.mean_x(:, end), 2, []);
 ```
 ## Results
@@ -51,10 +49,10 @@ These results can be obtained by running
 
 Here is the set of local tangent planes learned by LL-LVM.
 ![Learned local tangent planes on each
-point](https://github.com/mijungi/lllvm/tree/master/img/swiss_tangents.png)
+point](https://raw.githubusercontent.com/mijungi/lllvm/master/img/swiss_tangents.png)
 
 The following figure shows the evidence lower bounds during the EM, and 
 the dimensionally reduced points in the two-dimensional space.
 ![Evidence lower bounds and
-x](https://github.com/mijungi/lllvm/tree/master/img/swiss_x_lwbs.png)
+x](https://raw.githubusercontent.com/mijungi/lllvm/master/img/swiss_x_lwbs.png)
 
