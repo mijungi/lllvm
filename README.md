@@ -48,11 +48,13 @@ These results can be obtained by running
 [swissroll_demo.m](https://github.com/mijungi/lllvm/blob/master/code/script/swissroll_demo.m).
 
 Here is the set of local tangent planes learned by LL-LVM.
+
 ![Learned local tangent planes on each
 point](https://raw.githubusercontent.com/mijungi/lllvm/master/img/swiss_tangents.png)
 
 The following figure shows the evidence lower bounds during the EM, and 
 the dimensionally reduced points in the two-dimensional space.
+
 ![Evidence lower bounds and
 x](https://raw.githubusercontent.com/mijungi/lllvm/master/img/swiss_x_lwbs.png)
 
