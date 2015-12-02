@@ -10,7 +10,8 @@ a set of neighbourhood relationships.
     "Bayesian Manifold Learning: The Locally Linear Latent Variable Model"
     NIPS, 2015
 
-This repository contains a Matlab implementation of LL-LVM.
+This repository contains a Matlab implementation of LL-LVM. The paper can be 
+found [here](http://arxiv.org/abs/1410.6791).
 
 ## Demo script
 Running LL-LVM on a dataset is straightforward. For full demo script see, 
