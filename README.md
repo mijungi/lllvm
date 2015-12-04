@@ -11,7 +11,9 @@ a set of neighbourhood relationships.
     NIPS, 2015
 
 This repository contains a Matlab implementation of LL-LVM. The paper can be 
-found [here](http://arxiv.org/abs/1410.6791).
+found [here](http://arxiv.org/abs/1410.6791). A brief summary of LL-LVM can
+be found in these [presentation
+slides](http://wittawat.com/pages/files/slides/csml_lllvm.pdf).
 
 ## Demo script
 Running LL-LVM on a dataset is straightforward. For full demo script see, 
